@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import AgentCreateClient from "./AgentCreateClient";
 
-const BASE_URL = 'https://api.muapi.ai';
+const BASE_URL = process.env.API_BASE || 'https://api.muapi.ai';
 
 async function fetchUserData(apiKey) {
   if (!apiKey) return null;

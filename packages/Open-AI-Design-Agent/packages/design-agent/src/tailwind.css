@@ -65,6 +65,11 @@
     --radius-md: 10px;
     --radius-lg: 14px;
     --radius-xl: 18px;
+
+    /* Canvas ambience (grid + floating blobs behind the Konva stage) */
+    --grid-dot: rgba(15, 23, 42, 0.07);
+    --blob-a: #3b82f6;
+    --blob-b: #818cf8;
   }
 
   .dark {
@@ -89,6 +94,10 @@
     
     --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.3);
     --shadow-card-hover: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+
+    --grid-dot: rgba(255, 255, 255, 0.06);
+    --blob-a: #3b82f6;
+    --blob-b: #a78bfa;
   }
 
   .scrollbar-hide::-webkit-scrollbar {
@@ -122,6 +131,65 @@
 
   .dark .glass {
     background-color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* Canvas ambience — dot grid + drifting gradient blobs behind the Konva
+   stage. Purely decorative (pointer-events: none), sits at z-index 0 while
+   the Stage wrapper sits above it. Grid dot size intentionally matches the
+   Stage's own 32px snap grid so the two layers read as one surface. */
+.canvas-ambience {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.canvas-ambience__blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  opacity: 0.16;
+  will-change: transform;
+}
+
+.dark .canvas-ambience__blob {
+  opacity: 0.22;
+}
+
+.canvas-ambience__blob--a {
+  width: 32rem;
+  height: 32rem;
+  top: -8rem;
+  left: -6rem;
+  background: var(--blob-a);
+  animation: blob-drift-a 26s ease-in-out infinite alternate;
+}
+
+.canvas-ambience__blob--b {
+  width: 26rem;
+  height: 26rem;
+  bottom: -8rem;
+  right: -4rem;
+  background: var(--blob-b);
+  animation: blob-drift-b 32s ease-in-out infinite alternate;
+}
+
+@keyframes blob-drift-a {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(6%, 8%) scale(1.12); }
+}
+
+@keyframes blob-drift-b {
+  0%   { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-6%, -6%) scale(1.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-ambience__blob--a,
+  .canvas-ambience__blob--b {
+    animation: none;
   }
 }
 

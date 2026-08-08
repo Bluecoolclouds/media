@@ -1,0 +1,72 @@
+export const agentStudioDict = {
+    en: {
+        'header.title': 'Agents',
+        'tab.templates': 'templates',
+        'tab.myAgents': 'my agents',
+        'tab.myChats': 'my chats',
+        'create': '+ Create',
+
+        'time.justNow': 'just now',
+        'time.minutesAgo': (n) => `${n}m ago`,
+        'time.hoursAgo': (n) => `${n}h ago`,
+        'time.daysAgo': (n) => `${n}d ago`,
+
+        'card.defaultCategory': 'AI Assistant',
+        'card.unnamedAgent': 'Unnamed Agent',
+        'card.byOwner': (name) => `By ${name}`,
+        'card.unknownAgent': 'Unknown Agent',
+        'card.msgs': (n) => `${n} msgs`,
+
+        'retry': 'Retry',
+
+        'empty.myChatsBadge': 'My Chats',
+        'empty.noConversations': 'No conversations',
+        'empty.justYet': 'just yet',
+        'empty.chatsDesc': 'Start chatting with an agent and your conversations will show up here.',
+        'empty.browseTemplates': 'Browse Templates',
+
+        'empty.agentsBadge': 'Agents',
+        'empty.buildFirst': 'Build your first',
+        'empty.aiAgent': 'AI agent',
+        'empty.noAgents': 'No agents',
+        'empty.foundHere': 'found here',
+        'empty.myAgentsDesc': 'Create a custom AI agent with its own instructions, tools and personality.',
+        'empty.templatesDesc': 'Nothing to show in this section yet.',
+        'empty.createAgent': '+ Create Agent',
+    },
+    ru: {
+        'header.title': 'Агенты',
+        'tab.templates': 'шаблоны',
+        'tab.myAgents': 'мои агенты',
+        'tab.myChats': 'мои чаты',
+        'create': '+ Создать',
+
+        'time.justNow': 'только что',
+        'time.minutesAgo': (n) => `${n} мин назад`,
+        'time.hoursAgo': (n) => `${n} ч назад`,
+        'time.daysAgo': (n) => `${n} дн назад`,
+
+        'card.defaultCategory': 'AI-ассистент',
+        'card.unnamedAgent': 'Безымянный агент',
+        'card.byOwner': (name) => `Автор: ${name}`,
+        'card.unknownAgent': 'Неизвестный агент',
+        'card.msgs': (n) => `${n} сообщ.`,
+
+        'retry': 'Повторить',
+
+        'empty.myChatsBadge': 'Мои чаты',
+        'empty.noConversations': 'Пока нет',
+        'empty.justYet': 'разговоров',
+        'empty.chatsDesc': 'Начните общаться с агентом, и ваши разговоры появятся здесь.',
+        'empty.browseTemplates': 'Просмотреть шаблоны',
+
+        'empty.agentsBadge': 'Агенты',
+        'empty.buildFirst': 'Создайте своего первого',
+        'empty.aiAgent': 'AI-агента',
+        'empty.noAgents': 'Здесь пока',
+        'empty.foundHere': 'ничего нет',
+        'empty.myAgentsDesc': 'Создайте собственного AI-агента с уникальными инструкциями, инструментами и характером.',
+        'empty.templatesDesc': 'В этом разделе пока ничего нет.',
+        'empty.createAgent': '+ Создать агента',
+    },
+};

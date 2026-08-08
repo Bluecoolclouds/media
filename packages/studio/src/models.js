@@ -1,5 +1,70 @@
 // Auto-generated from models_dump.json
+// ── apinet.cloud image models (active provider) ──────────────────────────────
+// These drive the Image Studio T2I dropdown. Ids are real apinet model ids.
 export const t2iModels = [
+  {
+    id: "doubao-seedream-4-0-250828",
+    name: "Seedream 4.0",
+    endpoint: "doubao-seedream-4-0-250828",
+    inputs: {
+      prompt: { type: "string", title: "Prompt", name: "prompt" },
+      aspect_ratio: {
+        enum: ["1:1", "3:4", "4:3", "9:16", "16:9", "2:3", "3:2"],
+        default: "1:1", type: "string", title: "Aspect Ratio", name: "aspect_ratio",
+      },
+    },
+  },
+  {
+    id: "nano-banana",
+    name: "Nano Banana",
+    endpoint: "nano-banana",
+    inputs: {
+      prompt: { type: "string", title: "Prompt", name: "prompt" },
+      aspect_ratio: {
+        enum: ["1:1", "3:4", "4:3", "9:16", "16:9"],
+        default: "1:1", type: "string", title: "Aspect Ratio", name: "aspect_ratio",
+      },
+    },
+  },
+  {
+    id: "gemini-2.5-flash-image",
+    name: "Gemini 2.5 Flash Image",
+    endpoint: "gemini-2.5-flash-image",
+    inputs: {
+      prompt: { type: "string", title: "Prompt", name: "prompt" },
+      aspect_ratio: {
+        enum: ["1:1", "3:4", "4:3", "9:16", "16:9"],
+        default: "1:1", type: "string", title: "Aspect Ratio", name: "aspect_ratio",
+      },
+    },
+  },
+  {
+    id: "flux-1-schnell",
+    name: "FLUX.1 Schnell",
+    endpoint: "flux-1-schnell",
+    inputs: {
+      prompt: { type: "string", title: "Prompt", name: "prompt" },
+      aspect_ratio: {
+        enum: ["1:1", "3:4", "4:3", "9:16", "16:9"],
+        default: "1:1", type: "string", title: "Aspect Ratio", name: "aspect_ratio",
+      },
+    },
+  },
+  {
+    id: "dall-e-3",
+    name: "DALL·E 3",
+    endpoint: "dall-e-3",
+    inputs: {
+      prompt: { type: "string", title: "Prompt", name: "prompt" },
+      aspect_ratio: {
+        enum: ["1:1", "16:9", "9:16"],
+        default: "1:1", type: "string", title: "Aspect Ratio", name: "aspect_ratio",
+      },
+    },
+  },
+];
+
+export const t2iModelsLegacy = [
   {
     "id": "nano-banana",
     "name": "Nano Banana",

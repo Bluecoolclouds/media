@@ -2,14 +2,15 @@
 
 import React from 'react';
 import { FaGithub, FaTerminal, FaPlug, FaStar, FaExternalLinkAlt } from 'react-icons/fa';
+import { useLang, makeT } from '../i18n/useLang';
+import { mcpCliStudioDict } from '../i18n/dictionaries/mcpCliStudio';
 
 const FEATURES = [
   {
     tag: 'CLI',
     title: 'muapi-cli',
     icon: FaTerminal,
-    description:
-      'Generate images, videos, and audio from the terminal across 14+ AI models. Dual interface — colored human output plus JSON for agents (--output-json, --jq filtering). Async workflows, file uploads, credit tracking.',
+    descriptionKey: 'feature.cli.description',
     code: `npm install -g muapi-cli
 muapi auth login
 muapi image generate "a cyberpunk city" \\
@@ -20,8 +21,7 @@ muapi image generate "a cyberpunk city" \\
     tag: 'MCP',
     title: 'muapi-mcp-server',
     icon: FaPlug,
-    description:
-      'Connect Claude, Cursor, Windsurf, and any MCP-compatible assistant to 100+ generative models. Hosted endpoint — no install. 19 structured tools with input/output schemas, async polling, and account management.',
+    descriptionKey: 'feature.mcp.description',
     code: `claude mcp add --transport http muapi \\
   https://api.muapi.ai/mcp \\
   --header "Authorization: Bearer YOUR_KEY"`,
@@ -31,24 +31,23 @@ muapi image generate "a cyberpunk city" \\
     tag: 'Skills',
     title: 'Generative Media Skills',
     icon: FaStar,
-    description:
-      'Multimodal toolkit for Claude Code, Cursor, and Gemini CLI. Cinema Director, Nano-Banana, UI Designer, Logo Creator, Seedance 2, AI Clipping, and YouTube Shorts presets. Agent-native with JSON outputs and semantic exit codes.',
+    descriptionKey: 'feature.skills.description',
     code: `npx skills add SamurAIGPT/Generative-Media-Skills --all`,
     href: 'https://github.com/SamurAIGPT/Generative-Media-Skills',
   },
 ];
 
 const QUICK_STEPS = [
-  { num: '1', title: 'Install the CLI', code: 'npm install -g muapi-cli' },
-  { num: '2', title: 'Sign in', code: 'muapi auth login' },
-  { num: '3', title: 'Add the skills', code: 'npx skills add SamurAIGPT/Generative-Media-Skills' },
+  { num: '1', titleKey: 'quickStart.step1.title', code: 'npm install -g muapi-cli' },
+  { num: '2', titleKey: 'quickStart.step2.title', code: 'muapi auth login' },
+  { num: '3', titleKey: 'quickStart.step3.title', code: 'npx skills add SamurAIGPT/Generative-Media-Skills' },
 ];
 
 const EXAMPLES = [
-  { title: 'Image generation', code: 'muapi image generate "a serene mountain lake at sunrise" \\\n  --model flux-dev --download ./outputs' },
-  { title: 'Text-to-video', code: 'muapi video generate "a dog running on a beach" \\\n  --model kling-master' },
-  { title: 'Audio creation', code: 'muapi audio create "upbeat lo-fi hip hop for studying"' },
-  { title: 'Run a skill', code: 'bash library/visual/nano-banana/scripts/\\\n  generate-nano-art.sh --file image.jpg --view' },
+  { titleKey: 'examples.image.title', code: 'muapi image generate "a serene mountain lake at sunrise" \\\n  --model flux-dev --download ./outputs' },
+  { titleKey: 'examples.video.title', code: 'muapi video generate "a dog running on a beach" \\\n  --model kling-master' },
+  { titleKey: 'examples.audio.title', code: 'muapi audio create "upbeat lo-fi hip hop for studying"' },
+  { titleKey: 'examples.skill.title', code: 'bash library/visual/nano-banana/scripts/\\\n  generate-nano-art.sh --file image.jpg --view' },
 ];
 
 function CodeBlock({ children, className = '' }) {
@@ -62,6 +61,9 @@ function CodeBlock({ children, className = '' }) {
 }
 
 export default function McpCliStudio() {
+  const lang = useLang();
+  const t = makeT(mcpCliStudioDict, lang);
+
   return (
     <div className="w-full h-full overflow-y-auto bg-[#050505] text-white">
       <div className="max-w-5xl mx-auto px-6 py-12 flex flex-col gap-12">
@@ -69,20 +71,18 @@ export default function McpCliStudio() {
         {/* Hero */}
         <section className="flex flex-col items-center text-center gap-4">
           <div className="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-[11px] font-bold uppercase tracking-widest text-white/60">
-            For developers &amp; AI agents
+            {t('hero.tag')}
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">MCP &amp; CLI</h1>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">{t('hero.title')}</h1>
           <p className="text-white/60 text-base md:text-lg max-w-2xl">
-            Use Open Generative AI from your terminal, your IDE, or any MCP-compatible
-            assistant. Generate cinematic images, videos, and audio across 100+ models —
-            without leaving your workflow.
+            {t('hero.subtitle')}
           </p>
         </section>
 
         {/* Quick start */}
         <section className="rounded-2xl border border-white/5 bg-white/[0.02] p-6 md:p-8 flex flex-col gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-white/50">Quick start</span>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-white/50">{t('quickStart.label')}</span>
             <div className="flex-1 h-px bg-white/5" />
           </div>
           <div className="grid md:grid-cols-3 gap-4">
@@ -95,7 +95,7 @@ export default function McpCliStudio() {
                   <span className="w-6 h-6 rounded-full bg-white text-black text-xs font-bold flex items-center justify-center">
                     {step.num}
                   </span>
-                  <span className="text-sm font-bold">{step.title}</span>
+                  <span className="text-sm font-bold">{t(step.titleKey)}</span>
                 </div>
                 <CodeBlock className="text-[11.5px]">{step.code}</CodeBlock>
               </div>
@@ -122,11 +122,11 @@ export default function McpCliStudio() {
                   <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">{f.tag}</span>
                 </div>
                 <h3 className="text-lg font-bold">{f.title}</h3>
-                <p className="text-[13px] text-white/60 leading-relaxed">{f.description}</p>
+                <p className="text-[13px] text-white/60 leading-relaxed">{t(f.descriptionKey)}</p>
                 <CodeBlock>{f.code}</CodeBlock>
                 <div className="mt-auto flex items-center gap-1.5 text-[12px] font-bold text-white/50 group-hover:text-white transition-colors">
                   <FaGithub className="text-sm" />
-                  <span>View on GitHub</span>
+                  <span>{t('feature.viewOnGithub')}</span>
                   <FaExternalLinkAlt className="text-[10px]" />
                 </div>
               </a>
@@ -137,16 +137,16 @@ export default function McpCliStudio() {
         {/* Examples */}
         <section className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-white/50">Examples</span>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-white/50">{t('examples.label')}</span>
             <div className="flex-1 h-px bg-white/5" />
           </div>
           <div className="grid md:grid-cols-2 gap-4">
             {EXAMPLES.map((ex) => (
               <div
-                key={ex.title}
+                key={ex.titleKey}
                 className="rounded-xl border border-white/5 bg-white/[0.02] p-4 flex flex-col gap-2"
               >
-                <span className="text-[12px] font-bold text-white/80">{ex.title}</span>
+                <span className="text-[12px] font-bold text-white/80">{t(ex.titleKey)}</span>
                 <CodeBlock>{ex.code}</CodeBlock>
               </div>
             ))}
@@ -154,7 +154,7 @@ export default function McpCliStudio() {
         </section>
 
         <p className="text-center text-xs text-white/40 pb-4">
-          Open-source · MIT licensed · Works with Claude, Cursor, Windsurf, and Gemini CLI
+          {t('footer')}
         </p>
       </div>
     </div>

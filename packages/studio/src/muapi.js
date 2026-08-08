@@ -3,9 +3,12 @@ import { getModelById, getVideoModelById, getI2IModelById, getI2VModelById, getV
 // In an http(s) browser we route through the host app's proxy (Next.js routes
 // under /api/* re-issue the call server-side) so api.muapi.ai CORS is bypassed.
 // SSR (no window) and Electron's file:// renderer call the upstream directly.
+const UPSTREAM_BASE =
+    (typeof process !== 'undefined' && process.env && process.env.NEXT_PUBLIC_API_BASE) ||
+    'https://api.muapi.ai';
 const BASE_URL = (typeof window !== 'undefined' && window.location?.protocol?.startsWith('http'))
     ? '/api'
-    : 'https://api.muapi.ai';
+    : UPSTREAM_BASE;
 const PROXY_WF_BASE = '/api/workflow';
 
 function notifyAuthRequired(status, detail) {
@@ -60,7 +63,38 @@ async function submitAndPoll(endpoint, payload, key, onRequestId, maxAttempts = 
     return { ...result, url: outputUrl };
 }
 
+function aspectToSize(ar) {
+    const map = {
+        '1:1': '1024x1024', '3:4': '896x1152', '4:3': '1152x896',
+        '9:16': '768x1344', '16:9': '1344x768', '2:3': '832x1216',
+        '3:2': '1216x832', '4:5': '896x1120', '5:4': '1120x896', '21:9': '1536x640',
+    };
+    return map[ar] || '1024x1024';
+}
+
 export async function generateImage(apiKey, params) {
+    // OpenAI-compatible image proxy (/api/images) — provider returns image synchronously, no polling.
+    const url = (typeof window !== 'undefined' && window.location?.protocol?.startsWith('http'))
+        ? '/api/images'
+        : `${UPSTREAM_BASE}/images/generations`;
+    const size = params.size || aspectToSize(params.aspect_ratio);
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+        body: JSON.stringify({ model: params.model, prompt: params.prompt, size, n: 1 }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        notifyAuthRequired(response.status, data?.error || '');
+        throw new Error(data?.error || `Image generation failed: ${response.status}`);
+    }
+    let outUrl = data.url || data?.data?.[0]?.url || null;
+    if (!outUrl && data?.data?.[0]?.b64_json) outUrl = `data:image/png;base64,${data.data[0].b64_json}`;
+    if (!outUrl) throw new Error('No image returned by provider');
+    return { url: outUrl, model: params.model };
+}
+
+async function generateImageLegacy(apiKey, params) {
     const modelInfo = getModelById(params.model);
     const endpoint = modelInfo?.endpoint || params.model;
     const payload = { prompt: params.prompt };
@@ -279,8 +313,9 @@ export async function getUserBalance(apiKey) {
         }
     });
     if (!response.ok) {
+        // Passive background poll — don't pop the auth modal just because this failed.
+        // The modal should only appear when the user actively tries to generate.
         const errText = await response.text();
-        notifyAuthRequired(response.status, errText);
         throw new Error(`Failed to fetch balance: ${response.status} - ${errText.slice(0, 100)}`);
     }
     return await response.json();

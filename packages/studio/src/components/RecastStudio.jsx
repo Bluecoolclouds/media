@@ -7,6 +7,8 @@ import {
   getRecastModelById,
   getAspectRatiosForRecastModel,
 } from "../models.js";
+import { useLang, makeT } from "../i18n/useLang";
+import { recastStudioDict } from "../i18n/dictionaries/recastStudio";
 
 // ---------------------------------------------------------------------------
 // Upload button states
@@ -30,6 +32,8 @@ function MediaPickerButton({
   isVideo,
 }) {
   const inputRef = useRef(null);
+  const lang = useLang();
+  const t = makeT(recastStudioDict, lang);
 
   const handleClick = (e) => {
     e.stopPropagation();
@@ -57,8 +61,10 @@ function MediaPickerButton({
       type="button"
       title={
         uploadState === UPLOAD_STATE.READY
-          ? `${fileName} — click to clear`
-          : `Upload ${label.toLowerCase()} file`
+          ? t('upload.title.readyToClear')(fileName)
+          : label === "Video"
+          ? t('upload.title.video')
+          : t('upload.title.image')
       }
       onClick={handleClick}
       className={`flex-shrink-0 w-10 h-10 rounded-full border transition-all flex items-center justify-center relative overflow-hidden group ${borderClass}`}
@@ -303,6 +309,9 @@ export default function RecastStudio({
   const aspectBtnRef = useRef(null);
   const hasRestored = useRef(false);
 
+  const lang = useLang();
+  const t = makeT(recastStudioDict, lang);
+
   // ── Persistence: Load ──────────────────────────────────────────────────────
   useEffect(() => {
     try {
@@ -374,7 +383,7 @@ export default function RecastStudio({
   const handleVideoPick = useCallback(
     async (file) => {
       if (file.size > 50 * 1024 * 1024) {
-        alert("Video exceeds 50MB limit.");
+        alert(t('alert.videoTooLarge'));
         return;
       }
       setVideoState(UPLOAD_STATE.UPLOADING);
@@ -386,7 +395,7 @@ export default function RecastStudio({
         setVideoState(UPLOAD_STATE.READY);
       } catch (err) {
         setVideoState(UPLOAD_STATE.IDLE);
-        alert(`Video upload failed: ${err.message}`);
+        alert(t('alert.videoUploadFailed')(err.message));
       } finally {
         setVideoProgress(0);
       }
@@ -397,7 +406,7 @@ export default function RecastStudio({
   const handleImageUpload = useCallback(
     async (file) => {
       if (file.size > 10 * 1024 * 1024) {
-        alert("Image exceeds 10MB limit.");
+        alert(t('alert.imageTooLarge'));
         return;
       }
       setImageState(UPLOAD_STATE.UPLOADING);
@@ -409,7 +418,7 @@ export default function RecastStudio({
         setImageState(UPLOAD_STATE.READY);
       } catch (err) {
         setImageState(UPLOAD_STATE.IDLE);
-        alert(`Image upload failed: ${err.message}`);
+        alert(t('alert.imageUploadFailed')(err.message));
       } finally {
         setImageProgress(0);
       }
@@ -462,11 +471,11 @@ export default function RecastStudio({
   // ── Generation ──────────────────────────────────────────────────────────────
   const handleGenerate = async () => {
     if (!videoUrl) {
-      alert("Please upload a source video first.");
+      alert(t('alert.needVideo'));
       return;
     }
     if (!imageUrl) {
-      alert("Please upload a character image first.");
+      alert(t('alert.needImage'));
       return;
     }
 
@@ -484,7 +493,7 @@ export default function RecastStudio({
 
       const res = await processRecast(apiKey, params);
 
-      if (!res?.url) throw new Error("No video URL returned by API");
+      if (!res?.url) throw new Error(t('error.noVideoUrl'));
 
       const genId = res.id || Date.now().toString();
       const entry = {
@@ -507,7 +516,7 @@ export default function RecastStudio({
       }
     } catch (e) {
       console.error("[RecastStudio]", e);
-      setGenerateError(e.message?.slice(0, 80) ?? "Unknown error");
+      setGenerateError(e.message?.slice(0, 80) ?? t('error.unknown'));
       setTimeout(() => setGenerateError(null), 4000);
     } finally {
       setIsGenerating(false);
@@ -523,7 +532,35 @@ export default function RecastStudio({
 
       {/* ── CENTRAL GALLERY AREA ── */}
       <div className="flex-1 w-full max-w-7xl mx-auto overflow-y-auto custom-scrollbar pb-40 lg:pb-32 px-2">
-        {history.length > 0 ? (
+        {isGenerating ? (
+          /* ── Loading view ── */
+          <div className="flex flex-col items-center justify-center h-full min-h-[55vh] animate-fade-in transition-all duration-700 relative">
+            {/* Ambient glow */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[420px] h-[420px] bg-[#f59e0b]/15 blur-[140px] rounded-full animate-pulse" />
+            </div>
+            <div className="relative z-10 w-24 h-24 mb-8">
+              <div className="w-24 h-24 border-[3px] border-white/10 border-t-[#f59e0b] rounded-full animate-spin shadow-glow" />
+              <div className="absolute inset-0 flex items-center justify-center text-[#f59e0b]">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-pulse">
+                  <path d="M16 3h5v5" />
+                  <path d="M8 21H3v-5" />
+                  <path d="M21 3l-7 7" />
+                  <path d="M3 21l7-7" />
+                  <circle cx="12" cy="12" r="2.2" />
+                </svg>
+              </div>
+            </div>
+            <div className="relative z-10 text-center space-y-2">
+              <div className="text-xs font-black text-[#f59e0b] uppercase tracking-[0.3em]">
+                {t('loading.title')}
+              </div>
+              <div className="text-sm text-white/50 font-medium">
+                {t('loading.subtitle')}
+              </div>
+            </div>
+          </div>
+        ) : history.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full pt-4 animate-fade-in-up">
             {history.map((entry, idx) => (
               <div
@@ -549,7 +586,7 @@ export default function RecastStudio({
                 <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     type="button"
-                    title="Fullscreen"
+                    title={t('action.fullscreen')}
                     onClick={(e) => {
                       e.stopPropagation();
                       setFullscreenUrl(entry.url);
@@ -565,7 +602,7 @@ export default function RecastStudio({
                   </button>
                   <button
                     type="button"
-                    title="Download"
+                    title={t('action.download')}
                     onClick={(e) => {
                       e.stopPropagation();
                       downloadFile(entry.url, `bodyswap-${entry.id || idx}.mp4`);
@@ -582,7 +619,7 @@ export default function RecastStudio({
                 <div className="p-3 bg-black/80 backdrop-blur-sm border-t border-white/5 flex-1 flex flex-col justify-between gap-2">
                   <div className="flex items-center justify-between flex-wrap gap-1">
                     <span className="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded border border-primary/20 whitespace-nowrap">
-                      {entry.model?.name || entry.model || "Body Swap"}
+                      {entry.model?.name || entry.model || t('card.defaultModelName')}
                     </span>
                   </div>
                 </div>
@@ -590,36 +627,50 @@ export default function RecastStudio({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full animate-fade-in-up transition-all duration-700 min-h-[50vh]">
-            <div className="mb-12 relative group">
-              <div className="absolute inset-0 bg-primary/10 blur-[120px] rounded-full opacity-30 group-hover:opacity-60 transition-opacity duration-1000" />
-              <div className="relative w-24 h-24 md:w-32 md:h-32 bg-white/[0.02] rounded-[2rem] flex items-center justify-center border border-white/[0.05] overflow-hidden backdrop-blur-sm">
-                <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10 relative z-10 transition-transform duration-500 group-hover:scale-110">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary opacity-80">
-                    <path d="M16 3h5v5" />
-                    <path d="M8 21H3v-5" />
-                    <path d="M21 3l-7 7" />
-                    <path d="M3 21l7-7" />
-                    <circle cx="12" cy="12" r="2.2" />
-                  </svg>
-                </div>
-                <div className="absolute top-4 right-4 text-[10px] text-primary/40 animate-pulse">🎭</div>
-              </div>
+          <div className="flex flex-col items-center justify-center h-full animate-fade-in-up transition-all duration-700 min-h-[60vh] relative">
+            {/* Ambient glow */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[560px] h-[560px] bg-[#f59e0b]/10 blur-[160px] rounded-full opacity-70" />
             </div>
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight mb-4 text-center px-4">
-              <span className="text-white/40 font-medium">START CREATING WITH</span><br />
-              <span className="text-white">BODY SWAP</span>
+
+            {/* Eyebrow badge */}
+            <div className="relative z-10 mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] animate-pulse" />
+              <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-white/60">
+                {t('hero.badge')}
+              </span>
+            </div>
+
+            {/* Big cinematic headline */}
+            <h1 className="relative z-10 text-4xl sm:text-6xl md:text-7xl font-black text-center leading-[0.92] tracking-tighter mb-6 px-4">
+              <span className="block text-white">{t('hero.title.line1')}</span>
+              <span className="block bg-gradient-to-r from-[#fbbf24] via-[#f59e0b] to-[#f472b6] bg-clip-text text-transparent">
+                {t('hero.title.line2')}
+              </span>
             </h1>
-            <p className="text-white/40 text-sm md:text-base font-medium tracking-wide text-center max-w-lg leading-relaxed">
-              Swap the character in any video — drop in a clip and a character image
+
+            <p className="relative z-10 text-white/50 text-base md:text-lg font-medium text-center max-w-xl leading-relaxed mb-10 px-4">
+              {t('hero.subtitle')}
             </p>
+
+            {/* Quick-start how-it-works chips */}
+            <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 max-w-2xl px-4">
+              {[t('hero.chip.video'), t('hero.chip.image'), t('hero.chip.swap')].map((chip) => (
+                <div
+                  key={chip}
+                  className="px-4 py-2 rounded-full text-sm font-medium text-white/70 bg-white/[0.04] border border-white/10"
+                >
+                  {chip}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
       {/* ── BOTTOM PROMPT BAR ── */}
       <div className="absolute bottom-4 w-full max-w-[95%] lg:max-w-4xl z-40 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
-        <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-3xl rounded-md border border-white/10 p-4 flex flex-col gap-2 shadow-2xl">
+        <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-3xl rounded-2xl border border-white/10 p-4 flex flex-col gap-2 shadow-2xl ring-1 ring-[#f59e0b]/10">
           {/* Uploads row */}
           <div className="flex items-center gap-2 px-1">
             <div className="flex items-center gap-2">
@@ -666,7 +717,7 @@ export default function RecastStudio({
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Optional — describe the motion or scene..."
+                  placeholder={t('prompt.placeholder')}
                   className="w-full bg-transparent border-none text-white text-sm placeholder:text-white/10 focus:outline-none resize-none pt-1 leading-relaxed min-h-[40px] max-h-[150px] md:max-h-[250px] overflow-y-auto custom-scrollbar disabled:opacity-40"
                   rows={1}
                 />
@@ -674,7 +725,7 @@ export default function RecastStudio({
             ) : (
               <div className="flex-1 flex items-center pl-2">
                 <span className="text-xs text-white/30 font-medium">
-                  Your Video + Character Image → swapped video
+                  {t('prompt.hint')}
                 </span>
               </div>
             )}
@@ -698,7 +749,7 @@ export default function RecastStudio({
                     <span className="text-[9px] font-black text-black">R</span>
                   </div>
                   <span className="text-xs font-semibold text-white/70 group-hover:text-[#22d3ee] transition-colors">
-                    {selectedModel?.name ?? "Select model"}
+                    {selectedModel?.name ?? t('model.selectPlaceholder')}
                   </span>
                   <svg
                     width="10"
@@ -755,17 +806,17 @@ export default function RecastStudio({
               type="button"
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="bg-[#22d3ee] text-black px-4 py-2 rounded-md font-medium text-sm hover:bg-[#e5ff33] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-lg shadow-[#22d3ee]/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-[#f59e0b] text-black px-4 py-2 rounded-md font-medium text-sm hover:bg-[#fbbf24] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-lg shadow-[#f59e0b]/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? (
                 <>
                   <span className="animate-spin inline-block text-black">◌</span>{" "}
-                  Swapping...
+                  {t('generate.swapping')}
                 </>
               ) : generateError ? (
-                `Error: ${generateError}`
+                t('generate.error')(generateError)
               ) : (
-                <span>Swap Body</span>
+                <span>{t('generate.swapBody')}</span>
               )}
             </button>
           </div>

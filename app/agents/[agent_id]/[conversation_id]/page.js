@@ -10,11 +10,11 @@ import AgentChatClient from "../AgentChatClient";
  */
 export async function generateMetadata({ params }) {
   return {
-    title: `Agent Chat — Open Generative AI`,
+    title: `Agent Chat — apinet.cloud`,
   };
 }
 
-const BASE_URL = 'https://api.muapi.ai';
+const BASE_URL = process.env.API_BASE || 'https://api.muapi.ai';
 
 async function fetchAgentDetails(agentId, apiKey) {
   if (!apiKey) return null;

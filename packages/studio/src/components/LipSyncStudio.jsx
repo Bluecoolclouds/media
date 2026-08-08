@@ -9,6 +9,8 @@ import {
   getLipSyncModelById,
   getResolutionsForLipSyncModel,
 } from "../models.js";
+import { useLang, makeT } from "../i18n/useLang";
+import { lipSyncStudioDict } from "../i18n/dictionaries/lipSyncStudio";
 
 // ---------------------------------------------------------------------------
 // Upload button states
@@ -31,6 +33,8 @@ function MediaPickerButton({
   previewUrl,
   isVideo,
   apiKey,
+  t,
+  uploadTitleKey,
 }) {
   const inputRef = useRef(null);
 
@@ -60,8 +64,8 @@ function MediaPickerButton({
       type="button"
       title={
         uploadState === UPLOAD_STATE.READY
-          ? `${fileName} — click to clear`
-          : `Upload ${label.toLowerCase()} file`
+          ? t('title.clickToClear')(fileName)
+          : t(uploadTitleKey)
       }
       onClick={handleClick}
       className={`flex-shrink-0 w-10 h-10 rounded-full border transition-all flex items-center justify-center relative overflow-hidden group ${borderClass}`}
@@ -137,7 +141,7 @@ function MediaPickerButton({
                 <circle cx="18" cy="16" r="3" />
               </svg>
               <span className="text-[7px] font-black text-primary uppercase truncate w-full text-center">
-                {fileName?.split('.').pop() || "AUD"}
+                {fileName?.split('.').pop() || t('label.audioAbbrev')}
               </span>
             </div>
           )}
@@ -232,7 +236,7 @@ function Dropdown({ isOpen, items, selectedId, onSelect, onClose, anchorRef }) {
 // ---------------------------------------------------------------------------
 // History sidebar thumbnail
 // ---------------------------------------------------------------------------
-function HistoryThumb({ entry, isActive, onSelect, onDownload }) {
+function HistoryThumb({ entry, isActive, onSelect, onDownload, t }) {
   return (
     <div
       onClick={onSelect}
@@ -256,7 +260,7 @@ function HistoryThumb({ entry, isActive, onSelect, onDownload }) {
             onDownload(entry);
           }}
           className="p-1.5 bg-primary rounded-lg text-black hover:scale-110 transition-transform"
-          title="Download"
+          title={t ? t('title.download') : "Download"}
         >
           <svg
             width="12"
@@ -323,6 +327,9 @@ export default function LipSyncStudio({
   onFilesHandled,
 }) {
   const PERSIST_KEY = "hg_lipsync_studio_persistent";
+
+  const lang = useLang();
+  const t = makeT(lipSyncStudioDict, lang);
 
   // ── Mode & model state ──────────────────────────────────────────────────
   const [inputMode, setInputMode] = useState("image"); // 'image' | 'video'
@@ -471,7 +478,7 @@ export default function LipSyncStudio({
   const handleImageUpload = useCallback(
     async (file) => {
       if (file.size > 10 * 1024 * 1024) {
-        alert("Image exceeds 10MB limit.");
+        alert(t('alert.imageTooLarge'));
         return;
       }
       setImageState(UPLOAD_STATE.UPLOADING);
@@ -485,18 +492,18 @@ export default function LipSyncStudio({
         setImageState(UPLOAD_STATE.READY);
       } catch (err) {
         setImageState(UPLOAD_STATE.IDLE);
-        alert(`Image upload failed: ${err.message}`);
+        alert(t('alert.imageUploadFailed')(err.message));
       } finally {
         setImageProgress(0);
       }
     },
-    [apiKey],
+    [apiKey, t],
   );
 
   const handleVideoPick = useCallback(
     async (file) => {
       if (file.size > 50 * 1024 * 1024) {
-        alert("Video exceeds 50MB limit.");
+        alert(t('alert.videoTooLarge'));
         return;
       }
       setVideoState(UPLOAD_STATE.UPLOADING);
@@ -510,18 +517,18 @@ export default function LipSyncStudio({
         setVideoState(UPLOAD_STATE.READY);
       } catch (err) {
         setVideoState(UPLOAD_STATE.IDLE);
-        alert(`Video upload failed: ${err.message}`);
+        alert(t('alert.videoUploadFailed')(err.message));
       } finally {
         setVideoProgress(0);
       }
     },
-    [apiKey],
+    [apiKey, t],
   );
 
   const handleAudioPick = useCallback(
     async (file) => {
       if (file.size > 10 * 1024 * 1024) {
-        alert("Audio file exceeds 10MB limit.");
+        alert(t('alert.audioTooLarge'));
         return;
       }
       setAudioState(UPLOAD_STATE.UPLOADING);
@@ -535,12 +542,12 @@ export default function LipSyncStudio({
         setAudioState(UPLOAD_STATE.READY);
       } catch (err) {
         setAudioState(UPLOAD_STATE.IDLE);
-        alert(`Audio upload failed: ${err.message}`);
+        alert(t('alert.audioUploadFailed')(err.message));
       } finally {
         setAudioProgress(0);
       }
     },
-    [apiKey],
+    [apiKey, t],
   );
 
   // ── Handle Dropped Files ────────────────────────────────────────────────
@@ -626,15 +633,15 @@ export default function LipSyncStudio({
   // ── Generation ──────────────────────────────────────────────────────────
   const handleGenerate = async () => {
     if (!audioUrl) {
-      alert("Please upload an audio file first.");
+      alert(t('alert.needAudio'));
       return;
     }
     if (inputMode === "image" && !imageUrl) {
-      alert("Please upload a portrait image first.");
+      alert(t('alert.needImage'));
       return;
     }
     if (inputMode === "video" && !videoUrl) {
-      alert("Please upload a source video first.");
+      alert(t('alert.needVideo'));
       return;
     }
 
@@ -654,7 +661,7 @@ export default function LipSyncStudio({
 
       const res = await processLipSync(apiKey, lipsyncParams);
 
-      if (!res?.url) throw new Error("No video URL returned by API");
+      if (!res?.url) throw new Error(t('error.noVideoUrl'));
 
       const genId = res.id || Date.now().toString();
       const entry = {
@@ -681,7 +688,7 @@ export default function LipSyncStudio({
       }
     } catch (e) {
       console.error("[LipSyncStudio]", e);
-      setGenerateError(e.message?.slice(0, 80) ?? "Unknown error");
+      setGenerateError(e.message?.slice(0, 80) ?? t('error.unknown'));
       setTimeout(() => setGenerateError(null), 4000);
     } finally {
       setIsGenerating(false);
@@ -709,17 +716,17 @@ export default function LipSyncStudio({
     inputMode === "image"
       ? imageState === UPLOAD_STATE.READY
         ? `✓ ${imageName}`
-        : "No image"
+        : t('status.noImage')
       : videoState === UPLOAD_STATE.READY
         ? `✓ ${videoName}`
-        : "No video";
+        : t('status.noVideo');
   const mediaStatusClass =
     (inputMode === "image" ? imageState : videoState) === UPLOAD_STATE.READY
       ? "text-primary"
       : "text-muted";
 
   const audioStatusText =
-    audioState === UPLOAD_STATE.READY ? `✓ ${audioName}` : "No audio";
+    audioState === UPLOAD_STATE.READY ? `✓ ${audioName}` : t('status.noAudio');
   const audioStatusClass =
     audioState === UPLOAD_STATE.READY ? "text-primary" : "text-muted";
 
@@ -738,7 +745,33 @@ export default function LipSyncStudio({
       
       {/* ── CENTRAL GALLERY AREA ── */}
       <div className="flex-1 w-full max-w-7xl mx-auto overflow-y-auto custom-scrollbar pb-40 lg:pb-32 px-2">
-        {history.length > 0 ? (
+        {isGenerating ? (
+          /* ── Loading view ── */
+          <div className="flex flex-col items-center justify-center h-full min-h-[55vh] animate-fade-in transition-all duration-700 relative">
+            {/* Ambient glow */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[420px] h-[420px] bg-[#f472b6]/15 blur-[140px] rounded-full animate-pulse" />
+            </div>
+            <div className="relative z-10 w-24 h-24 mb-8">
+              <div className="w-24 h-24 border-[3px] border-white/10 border-t-[#f472b6] rounded-full animate-spin shadow-glow" />
+              <div className="absolute inset-0 flex items-center justify-center text-[#f472b6]">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-pulse">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                </svg>
+              </div>
+            </div>
+            <div className="relative z-10 text-center space-y-2">
+              <div className="text-xs font-black text-[#f472b6] uppercase tracking-[0.3em]">
+                {t('loading.title')}
+              </div>
+              <div className="text-sm text-white/50 font-medium">
+                {t('loading.subtitle')}
+              </div>
+            </div>
+          </div>
+        ) : history.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full pt-4 animate-fade-in-up">
             {history.map((entry, idx) => (
               <div
@@ -764,7 +797,7 @@ export default function LipSyncStudio({
                 <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     type="button"
-                    title="Fullscreen"
+                    title={t('title.fullscreen')}
                     onClick={(e) => {
                       e.stopPropagation();
                       setFullscreenUrl(entry.url);
@@ -780,7 +813,7 @@ export default function LipSyncStudio({
                   </button>
                   <button
                     type="button"
-                    title="Download"
+                    title={t('title.download')}
                     onClick={(e) => {
                       e.stopPropagation();
                       downloadFile(entry.url, `lipsync-${entry.id || idx}.mp4`);
@@ -797,7 +830,7 @@ export default function LipSyncStudio({
                 <div className="p-3 bg-black/80 backdrop-blur-sm border-t border-white/5 flex-1 flex flex-col justify-between gap-2">
                   <div className="flex items-center justify-between flex-wrap gap-1">
                     <span className="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded border border-primary/20 whitespace-nowrap">
-                      {entry.model?.name || entry.model || "Lip Sync"}
+                      {entry.model?.name || entry.model || t('badge.lipSync')}
                     </span>
                     {entry.resolution && (
                       <span className="text-[10px] text-white/40">{entry.resolution}</span>
@@ -808,35 +841,56 @@ export default function LipSyncStudio({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full animate-fade-in-up transition-all duration-700 min-h-[50vh]">
-            <div className="mb-12 relative group">
-              <div className="absolute inset-0 bg-primary/10 blur-[120px] rounded-full opacity-30 group-hover:opacity-60 transition-opacity duration-1000" />
-              <div className="relative w-24 h-24 md:w-32 md:h-32 bg-white/[0.02] rounded-[2rem] flex items-center justify-center border border-white/[0.05] overflow-hidden backdrop-blur-sm">
-                <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10 relative z-10 transition-transform duration-500 group-hover:scale-110">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary opacity-80">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="23" />
-                    <line x1="8" y1="23" x2="16" y2="23" />
-                  </svg>
-                </div>
-                <div className="absolute top-4 right-4 text-[10px] text-primary/40 animate-pulse">🎙</div>
-              </div>
+          <div className="flex flex-col items-center justify-center h-full animate-fade-in-up transition-all duration-700 min-h-[60vh] relative">
+            {/* Ambient glow */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[560px] h-[560px] bg-[#f472b6]/10 blur-[160px] rounded-full opacity-70" />
             </div>
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight mb-4 text-center px-4">
-              <span className="text-white/40 font-medium">START CREATING WITH</span><br />
-              <span className="text-white">LIP SYNC</span>
+
+            {/* Eyebrow badge */}
+            <div className="relative z-10 mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#f472b6] animate-pulse" />
+              <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-white/60">
+                {t('badge.lipSync')}
+              </span>
+            </div>
+
+            {/* Big cinematic headline */}
+            <h1 className="relative z-10 text-4xl sm:text-6xl md:text-7xl font-black text-center leading-[0.92] tracking-tighter mb-6 px-4">
+              <span className="block text-white">{t('headline.line1')}</span>
+              <span className="block bg-gradient-to-r from-[#f9a8d4] via-[#f472b6] to-[#a855f7] bg-clip-text text-transparent">
+                {t('headline.line2')}
+              </span>
             </h1>
-            <p className="text-white/40 text-sm md:text-base font-medium tracking-wide text-center max-w-lg leading-relaxed">
-              Animate portraits or sync lips to audio with AI
+
+            <p className="relative z-10 text-white/50 text-base md:text-lg font-medium text-center max-w-xl leading-relaxed mb-10 px-4">
+              {t('description')}
             </p>
+
+            {/* Quick-start how-it-works chips */}
+            <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 max-w-2xl px-4">
+              {[
+                { label: t('chip.pickPortrait'), action: switchToImage },
+                { label: t('chip.useVideo'), action: switchToVideo },
+                { label: t('chip.addAudio'), action: null },
+              ].map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  onClick={() => chip.action?.()}
+                  className="px-4 py-2 rounded-full text-sm font-medium text-white/70 bg-white/[0.04] border border-white/10 hover:border-[#f472b6]/50 hover:text-white hover:bg-[#f472b6]/10 transition-all duration-300"
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
       {/* ── BOTTOM PROMPT BAR ── */}
       <div className="absolute bottom-4 w-full max-w-[95%] lg:max-w-4xl z-40 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
-        <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-3xl rounded-md border border-white/10 p-4 flex flex-col gap-2 shadow-2xl">
+        <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-3xl rounded-2xl border border-white/10 p-4 flex flex-col gap-2 shadow-2xl ring-1 ring-[#f472b6]/10">
           {/* Mode toggle row */}
           <div className="flex items-center gap-2 px-3">
             <button
@@ -848,7 +902,7 @@ export default function LipSyncStudio({
                   : "border-white/[0.03] bg-white/[0.03] text-white/40 hover:border-white/20 hover:text-white"
               }`}
             >
-              🖼 Portrait Image
+              {t('toggle.portraitImage')}
             </button>
             <button
               type="button"
@@ -859,7 +913,7 @@ export default function LipSyncStudio({
                   : "border-white/[0.03] bg-white/[0.03] text-white/40 hover:border-white/20 hover:text-white"
               }`}
             >
-              🎬 Video
+              {t('toggle.video')}
             </button>
           </div>
 
@@ -870,7 +924,9 @@ export default function LipSyncStudio({
               {inputMode === "image" && (
                 <MediaPickerButton
                   accept="image/*"
-                  label="Image"
+                  label={t('label.image')}
+                  t={t}
+                  uploadTitleKey="title.uploadImage"
                   icon={
                     <svg
                       width="16"
@@ -905,7 +961,9 @@ export default function LipSyncStudio({
               {inputMode === "video" && (
                 <MediaPickerButton
                   accept="video/*"
-                  label="Video"
+                  label={t('label.video')}
+                  t={t}
+                  uploadTitleKey="title.uploadVideo"
                   icon={
                     <VideoIcon className="text-white/40 group-hover:text-primary transition-colors" />
                   }
@@ -927,7 +985,9 @@ export default function LipSyncStudio({
               {/* Audio picker — always visible */}
               <MediaPickerButton
                 accept="audio/*"
-                label="Audio"
+                label={t('label.audio')}
+                t={t}
+                uploadTitleKey="title.uploadAudio"
                 icon={
                   <MicIcon className="text-white/40 group-hover:text-primary transition-colors" />
                 }
@@ -952,7 +1012,7 @@ export default function LipSyncStudio({
                 <textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Describe speech style..."
+                  placeholder={t('placeholder.speechStyle')}
                   className="w-full bg-transparent border-none text-white text-sm placeholder:text-white/10 focus:outline-none resize-none pt-1 leading-relaxed min-h-[40px] max-h-[150px] md:max-h-[250px] overflow-y-auto custom-scrollbar disabled:opacity-40"
                   rows={1}
                 />
@@ -982,7 +1042,7 @@ export default function LipSyncStudio({
                     </span>
                   </div>
                   <span className="text-xs font-semibold text-white/70 group-hover:text-[#22d3ee] transition-colors">
-                    {selectedModel?.name ?? "Select model"}
+                    {selectedModel?.name ?? t('model.selectPlaceholder')}
                   </span>
                   <svg
                     width="10"
@@ -1041,20 +1101,20 @@ export default function LipSyncStudio({
               type="button"
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="bg-[#22d3ee] text-black px-4 py-2 rounded-md font-medium text-sm hover:bg-[#e5ff33] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-lg shadow-[#22d3ee]/10 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-[#f472b6] text-black px-4 py-2 rounded-md font-medium text-sm hover:bg-[#f9a8d4] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 w-full sm:w-auto shadow-lg shadow-[#f472b6]/20 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isGenerating ? (
                 <>
                   <span className="animate-spin inline-block text-black">
                     ◌
                   </span>{" "}
-                  Generating...
+                  {t('generate.generating')}
                 </>
               ) : generateError ? (
-                `Error: ${generateError}`
+                t('generate.error')(generateError)
               ) : (
                 <>
-                  <span>Sync Lip</span>
+                  <span>{t('generate.syncLip')}</span>
                 </>
               )}
             </button>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { generateImage, generateI2I, uploadFile } from "../muapi.js";
+import { useLang, makeT } from "../i18n/useLang";
+import { imageStudioDict } from "../i18n/dictionaries/imageStudio";
 import {
   t2iModels,
   i2iModels,
@@ -38,7 +40,7 @@ async function downloadImage(url, filename) {
 
 // ─── UploadButton (inline picker) ───────────────────────────────────────────
 
-function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], label = null }) {
+function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], label = null, t }) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedEntries, setSelectedEntries] = useState([]); // [{url, thumbnail}]
@@ -81,7 +83,7 @@ function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], 
         const existingUrls = prev.map(h => h.url);
         const missing = initialUrls
           .filter(u => !existingUrls.includes(u))
-          .map(u => ({ id: `restored-${u}`, name: "Restored Image", url: u, progress: 100 }));
+          .map(u => ({ id: `restored-${u}`, name: t('upload.restoredImage'), url: u, progress: 100 }));
         return [...missing, ...prev];
       });
     }
@@ -117,7 +119,7 @@ function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], 
     const tooLarge = files.filter((f) => f.size > MAX_IMAGE_SIZE);
     if (tooLarge.length > 0) {
       alert(
-        `The following images are too large (max 10MB): ${tooLarge.map((f) => f.name).join(", ")}`,
+        t('upload.tooLarge')(tooLarge.map((f) => f.name).join(", ")),
       );
       return;
     }
@@ -173,7 +175,7 @@ function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], 
         }),
       );
     } catch (err) {
-      alert(`Image upload failed: ${err.message}`);
+      alert(t('upload.failed')(err.message));
     } finally {
       setUploading(false);
       setLastUploadProgress(0);
@@ -384,13 +386,13 @@ function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], 
     );
   }
 
-  const defaultLabel = isMulti ? `Add up to ${maxImages} images` : "Reference image";
+  const defaultLabel = isMulti ? t('upload.addUpToImages')(maxImages) : t('upload.referenceImage');
   const triggerTitle = hasSelection
     ? count > 1
-      ? `${count} of ${maxImages} images selected — click to manage`
+      ? t('upload.selectedClickManage')(count, maxImages)
       : isMulti
-        ? `1 image selected — click to add more (up to ${maxImages})`
-        : label || "Reference image"
+        ? t('upload.oneSelectedAddMore')(maxImages)
+        : label || t('upload.referenceImage')
     : label || defaultLabel;
 
   return (
@@ -434,11 +436,11 @@ function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], 
           <div className="flex items-center justify-between px-1 pb-3 mb-2 border-b border-white/5">
             <div className="flex flex-col gap-0.5">
               <span className="text-xs font-bold text-secondary">
-                Reference Images
+                {t('upload.referenceImages')}
               </span>
               {isMulti && (
                 <span className="text-[9px] text-muted">
-                  Select up to {maxImages} images
+                  {t('upload.selectUpToImages')(maxImages)}
                 </span>
               )}
             </div>
@@ -449,7 +451,7 @@ function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], 
                   onClick={handleDone}
                   className="flex items-center gap-1 px-3 py-1.5 bg-primary text-black rounded-xl text-xs font-black transition-all hover:scale-105"
                 >
-                  ✓ Done ({count})
+                  {t('upload.done')(count)}
                 </button>
               )}
               <button
@@ -473,7 +475,7 @@ function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], 
                   <polyline points="17 8 12 3 7 8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
-                {isMulti ? "Upload files" : "Upload new"}
+                {isMulti ? t('upload.uploadFiles') : t('upload.uploadNew')}
               </button>
             </div>
           </div>
@@ -494,7 +496,7 @@ function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], 
                 <polyline points="17 8 12 3 7 8" />
                 <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              <span className="text-xs text-secondary">No uploads yet</span>
+              <span className="text-xs text-secondary">{t('upload.noUploadsYet')}</span>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2 max-h-56 overflow-y-auto custom-scrollbar pr-0.5">
@@ -537,7 +539,7 @@ function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], 
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/cell:opacity-100 transition-opacity flex items-end justify-end p-1">
                         <button
                           type="button"
-                          title="Remove from history"
+                          title={t('upload.removeFromHistory')}
                           onClick={(e) => handleRemoveFromHistory(e, entry)}
                           className="w-5 h-5 bg-red-500/80 hover:bg-red-500 rounded-md flex items-center justify-center transition-colors"
                         >
@@ -587,14 +589,14 @@ function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], 
           {isMulti && hasSelection && (
             <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
               <span className="text-xs text-secondary">
-                {count} of {maxImages} selected
+                {t('upload.countOfMaxSelected')(count, maxImages)}
               </span>
               <button
                 type="button"
                 onClick={handleDone}
                 className="px-4 py-1.5 bg-primary text-black rounded-xl text-xs font-black transition-all hover:scale-105"
               >
-                Use Selected
+                {t('upload.useSelected')}
               </button>
             </div>
           )}
@@ -606,7 +608,7 @@ function UploadButton({ apiKey, maxImages, onSelect, onClear, initialUrls = [], 
 
 // ─── ModelDropdown ────────────────────────────────────────────────────────────
 
-function ModelDropdown({ models, selectedModel, onSelect, onClose }) {
+function ModelDropdown({ models, selectedModel, onSelect, onClose, t }) {
   const [search, setSearch] = useState("");
 
   const filtered = models.filter(
@@ -633,7 +635,7 @@ function ModelDropdown({ models, selectedModel, onSelect, onClose }) {
           </svg>
           <input
             type="text"
-            placeholder="Search models..."
+            placeholder={t('model.searchPlaceholder')}
             value={search}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => setSearch(e.target.value)}
@@ -642,7 +644,7 @@ function ModelDropdown({ models, selectedModel, onSelect, onClose }) {
         </div>
       </div>
       <div className="text-xs font-medium text-secondary py-2 shrink-0">
-        Available models
+        {t('model.availableModels')}
       </div>
       <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pr-1 pb-2">
         {filtered.map((m) => (
@@ -745,6 +747,9 @@ export default function ImageStudio({
   onFilesHandled,
 }) {
   const PERSIST_KEY = "hg_image_studio_persistent";
+
+  const lang = useLang();
+  const t = makeT(imageStudioDict, lang);
 
   // ── Model / mode state ──────────────────────────────────────────────────
   const [imageMode, setImageMode] = useState(false); // false=t2i, true=i2i
@@ -870,7 +875,7 @@ export default function ImageStudio({
     const tooLarge = files.filter((f) => f.size > MAX_IMAGE_SIZE);
     if (tooLarge.length > 0) {
       alert(
-        `The following images are too large (max 10MB): ${tooLarge.map((f) => f.name).join(", ")}`
+        t('upload.tooLarge')(tooLarge.map((f) => f.name).join(", "))
       );
       return;
     }
@@ -896,7 +901,7 @@ export default function ImageStudio({
 
       handleUploadSelect({ urls });
     } catch (err) {
-      alert(`Image upload failed: ${err.message}`);
+      alert(t('upload.failed')(err.message));
     } finally {
       setGenerating(false);
     }
@@ -1032,17 +1037,17 @@ export default function ImageStudio({
 
     if (imageMode) {
       if (uploadedImageUrls.length === 0) {
-        alert("Please upload a reference image first.");
+        alert(t('alert.uploadReferenceFirst'));
         return;
       }
       const modelInfo = getI2IModelById(selectedModelId);
       if (modelInfo?.swapField && !swapImageUrl) {
-        alert("Please upload a swap face image.");
+        alert(t('alert.uploadSwapFace'));
         return;
       }
     } else {
       if (!prompt.trim()) {
-        alert("Please enter a prompt to generate an image.");
+        alert(t('alert.enterPrompt'));
         return;
       }
     }
@@ -1111,10 +1116,10 @@ export default function ImageStudio({
 
   const placeholderText =
     uploadedImageUrls.length > 1
-      ? `${uploadedImageUrls.length} images selected — describe the transformation (optional)`
+      ? t('placeholder.multiImagesTransform')(uploadedImageUrls.length)
       : imageMode
-        ? "Describe how to transform this image (optional)"
-        : "Describe the image you want to create";
+        ? t('placeholder.transformImage')
+        : t('placeholder.describeImage');
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -1131,7 +1136,7 @@ export default function ImageStudio({
               >
                 <img
                   src={entry.url}
-                  alt={entry.prompt?.substring(0, 30) || "Generated image"}
+                  alt={entry.prompt?.substring(0, 30) || t('gallery.generatedImageAlt')}
                   className="w-full aspect-square object-cover bg-black/40 cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => setFullscreenUrl(entry.url)}
                 />
@@ -1140,7 +1145,7 @@ export default function ImageStudio({
                 <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     type="button"
-                    title="Fullscreen"
+                    title={t('action.fullscreen')}
                     onClick={(e) => {
                       e.stopPropagation();
                       setFullscreenUrl(entry.url);
@@ -1156,7 +1161,7 @@ export default function ImageStudio({
                   </button>
                   <button
                     type="button"
-                    title="Download"
+                    title={t('action.download')}
                     onClick={(e) => {
                       e.stopPropagation();
                       downloadImage(entry.url, `muapi-${entry.id || idx}.jpg`);
@@ -1172,7 +1177,7 @@ export default function ImageStudio({
                 {/* Prompt & Details */}
                 <div className="p-3 bg-black/80 backdrop-blur-sm border-t border-white/5 flex-1 flex flex-col justify-between gap-2">
                   <p className="text-white/70 text-xs line-clamp-3 leading-relaxed" title={entry.prompt}>
-                    {entry.prompt || "No prompt provided"}
+                    {entry.prompt || t('gallery.noPromptProvided')}
                   </p>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded border border-primary/20">
@@ -1195,29 +1200,29 @@ export default function ImageStudio({
             <div className="relative z-10 mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md">
               <span className="w-1.5 h-1.5 rounded-full bg-[#ff5c00] animate-pulse" />
               <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-white/60">
-                Image Studio
+                {t('badge.imageStudio')}
               </span>
             </div>
 
             {/* Big cinematic headline */}
             <h1 className="relative z-10 text-5xl sm:text-7xl md:text-[5.5rem] font-black text-center leading-[0.92] tracking-tighter mb-6 px-4">
-              <span className="block text-white">Turn words into</span>
+              <span className="block text-white">{t('headline.turnWordsInto')}</span>
               <span className="block bg-gradient-to-r from-[#ff8a3d] via-[#ff5c00] to-[#ff2d55] bg-clip-text text-transparent">
-                cinematic images
+                {t('headline.cinematicImages')}
               </span>
             </h1>
 
             <p className="relative z-10 text-white/50 text-base md:text-lg font-medium text-center max-w-xl leading-relaxed mb-10 px-4">
-              Describe a scene, a character, a mood — and generate it in seconds.
+              {t('subheadline.describeScene')}
             </p>
 
             {/* Quick-start prompt chips */}
             <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 max-w-2xl px-4">
               {[
-                "Neon cyberpunk city at night",
-                "Portrait, golden hour, 85mm",
-                "Surreal desert dreamscape",
-                "Retro film still, 1970s",
+                t('chip.neonCyberpunk'),
+                t('chip.portraitGoldenHour'),
+                t('chip.surrealDesert'),
+                t('chip.retroFilm'),
               ].map((chip) => (
                 <button
                   key={chip}
@@ -1247,6 +1252,7 @@ export default function ImageStudio({
               onSelect={handleUploadSelect}
               onClear={handleUploadClear}
               initialUrls={uploadedImageUrls}
+              t={t}
             />
             {imageMode && getI2IModelById(selectedModelId)?.swapField && (
               <UploadButton
@@ -1255,7 +1261,8 @@ export default function ImageStudio({
                 onSelect={({ urls }) => setSwapImageUrl(urls[0] || null)}
                 onClear={() => setSwapImageUrl(null)}
                 initialUrls={swapImageUrl ? [swapImageUrl] : []}
-                label="Swap Face"
+                label={t('upload.swapFace')}
+                t={t}
               />
             )}
             <div className="flex-1 flex flex-col gap-2">
@@ -1315,6 +1322,7 @@ export default function ImageStudio({
                       selectedModel={selectedModelId}
                       onSelect={handleModelSelect}
                       onClose={() => setDropdownOpen(null)}
+                      t={t}
                     />
                   </div>
                 )}
@@ -1344,7 +1352,7 @@ export default function ImageStudio({
                     className="absolute bottom-[calc(100%+12px)] left-0 z-50 bg-[#0a0a0a] rounded-md p-3 max-h-[40vh] overflow-y-auto custom-scrollbar shadow-2xl border border-white/10 min-w-[160px]"
                   >
                     <SimpleDropdown
-                      title="Aspect Ratio"
+                      title={t('dropdown.aspectRatio')}
                       options={currentAspectRatios}
                       selected={selectedAr}
                       onSelect={(val) => setSelectedAr(val)}
@@ -1379,7 +1387,7 @@ export default function ImageStudio({
                       className="absolute bottom-[calc(100%+12px)] left-0 z-50 bg-[#0a0a0a] rounded-md p-3 max-h-[40vh] overflow-y-auto custom-scrollbar shadow-2xl border border-white/[0.05] min-w-[160px]"
                     >
                       <SimpleDropdown
-                        title="Resolution"
+                        title={t('dropdown.resolution')}
                         options={currentResolutions}
                         selected={selectedQuality}
                         onSelect={(val) => setSelectedQuality(val)}
@@ -1405,7 +1413,7 @@ export default function ImageStudio({
                       <path d="M5 3l14 9-14 9V3z" />
                     </svg>
                     <span className="text-[11px] font-semibold text-white/70 group-hover:text-[#ff5c00] transition-colors max-w-[140px] truncate">
-                      {selectedEffect || "Effect"}
+                      {selectedEffect || t('dropdown.effectFallback')}
                     </span>
                   </button>
 
@@ -1415,7 +1423,7 @@ export default function ImageStudio({
                       className="absolute bottom-[calc(100%+12px)] left-0 z-50 bg-[#0a0a0a] rounded-md p-3 max-h-[40vh] overflow-y-auto custom-scrollbar shadow-2xl border border-white/[0.05] min-w-[200px]"
                     >
                       <SimpleDropdown
-                        title="Effect Type"
+                        title={t('dropdown.effectType')}
                         options={currentEffects}
                         selected={selectedEffect}
                         onSelect={(val) => setSelectedEffect(val)}
@@ -1455,13 +1463,13 @@ export default function ImageStudio({
               {generating ? (
                 <>
                   <span className="animate-spin inline-block text-black">◌</span>
-                  Generating...
+                  {t('generate.generating')}
                 </>
               ) : generateError ? (
-                `Error: ${generateError}`
+                t('generate.error')(generateError)
               ) : (
                 <>
-                  <span>Generate</span>
+                  <span>{t('generate.generate')}</span>
                 </>
               )}
             </button>
@@ -1490,7 +1498,7 @@ export default function ImageStudio({
           </button>
           <img 
             src={fullscreenUrl} 
-            alt="Fullscreen Preview" 
+            alt={t('modal.fullscreenPreviewAlt')} 
             className="max-w-[95vw] max-h-[95vh] rounded-2xl shadow-2xl object-contain animate-scale-up" 
             onClick={(e) => e.stopPropagation()}
           />

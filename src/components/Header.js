@@ -78,13 +78,18 @@ export function Header(navigate) {
         document.body.appendChild(SettingsModal());
     };
 
-    // Language toggle button
+    // Language toggle button — cycles EN -> RU -> EN
+    const LANG_CYCLE = ['en', 'ru'];
+    const LANG_LABEL = { en: 'EN', ru: 'RU' };
+    const LANG_TITLE_KEY = { en: 'web.switchToEn', ru: 'web.switchToRu' };
+
     const langBtn = document.createElement('button');
     const currentLang = getLang();
+    const nextLang = LANG_CYCLE[(LANG_CYCLE.indexOf(currentLang) + 1) % LANG_CYCLE.length];
     langBtn.className = 'flex items-center px-3 py-1.5 rounded-md border border-white/10 bg-white/5 text-[13px] font-bold text-white/80 hover:text-white hover:bg-white/10 hover:border-white/20 transition-colors';
-    langBtn.title = currentLang === 'zh-CN' ? t('web.switchToEn') : t('web.switchToZh');
-    langBtn.textContent = currentLang === 'zh-CN' ? 'EN' : '中文';
-    langBtn.onclick = () => setLang(currentLang === 'zh-CN' ? 'en' : 'zh-CN');
+    langBtn.title = t(LANG_TITLE_KEY[nextLang]);
+    langBtn.textContent = LANG_LABEL[nextLang];
+    langBtn.onclick = () => setLang(nextLang);
 
     rightPart.appendChild(langBtn);
     rightPart.appendChild(settingsBtn);

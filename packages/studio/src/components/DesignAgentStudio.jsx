@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { CreativeCanvas } from 'design-agent';
+import 'design-agent/dist/tailwind.css';
 
 import { getUserBalance } from '../muapi';
 

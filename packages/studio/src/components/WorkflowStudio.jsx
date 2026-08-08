@@ -15,22 +15,28 @@ import {
   getWorkflowData,
 } from "../muapi.js";
 import dynamic from "next/dynamic";
+import { useLang, makeT } from "../i18n/useLang";
+import { workflowStudioDict } from "../i18n/dictionaries/workflowStudio";
 
 const WorkflowUI = dynamic(() => import("./WorkflowUI"), {
   ssr: false,
-  loading: () => (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-white/5 border-t-[#22d3ee] rounded-full animate-spin" />
-        <div className="text-[10px] font-black text-white/20 uppercase tracking-widest">
-          Loading Builder...
+  loading: () => {
+    const lang = useLang();
+    const t = makeT(workflowStudioDict, lang);
+    return (
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-white/5 border-t-[#22d3ee] rounded-full animate-spin" />
+          <div className="text-[10px] font-black text-white/20 uppercase tracking-widest">
+            {t('loading.builder')}
+          </div>
         </div>
       </div>
-    </div>
-  ),
+    );
+  },
 });
 
-function WorkflowCard({ workflow, onClick, activeTab, onRename, onDelete }) {
+function WorkflowCard({ workflow, onClick, activeTab, onRename, onDelete, t }) {
   const [showOptions, setShowOptions] = useState(false);
 
   return (
@@ -38,28 +44,31 @@ function WorkflowCard({ workflow, onClick, activeTab, onRename, onDelete }) {
       onClick={() => onClick(workflow)}
       className="group relative aspect-[3/4] rounded-lg overflow-hidden cursor-pointer border border-white/5 bg-[#0a0a0a] transition-all hover:border-[#22d3ee]/30 hover:scale-[1.02] shadow-2xl"
     >
-      {workflow.thumbnail ? (
+      {/* Placeholder (always rendered as the base layer; the image sits on top
+          and is hidden via onError if the thumbnail URL fails, e.g. 403/404) */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center">
+        <svg
+          width="40"
+          height="40"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="white"
+          strokeWidth="1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="opacity-20"
+        >
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
+      </div>
+      {workflow.thumbnail && (
         <img
           src={workflow.thumbnail}
           alt={workflow.name}
+          loading="lazy"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center">
-          <svg
-            width="40"
-            height="40"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="white"
-            strokeWidth="1"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="opacity-20"
-          >
-            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-          </svg>
-        </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
       
@@ -89,7 +98,7 @@ function WorkflowCard({ workflow, onClick, activeTab, onRename, onDelete }) {
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
                   <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
                 </svg>
-                Rename
+                {t('card.rename')}
               </button>
               <button
                 onClick={() => onDelete(workflow.id)}
@@ -98,7 +107,7 @@ function WorkflowCard({ workflow, onClick, activeTab, onRename, onDelete }) {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
                 </svg>
-                Delete
+                {t('card.delete')}
               </button>
             </div>
           )}
@@ -108,17 +117,17 @@ function WorkflowCard({ workflow, onClick, activeTab, onRename, onDelete }) {
       {/* Community Profile Info */}
       {activeTab === 'published' && workflow.user_name && (
         <div className="absolute top-2 left-2 z-20 flex items-center gap-2 bg-black/40 backdrop-blur-md px-2 py-1 rounded-full border border-white/10">
-          <img src={workflow.user_profile || "/user_profile.png"} alt="profile" className="w-4 h-4 rounded-full" />
+          <img src={workflow.user_profile || "/user_profile.png"} alt={t('image.profileAlt')} className="w-4 h-4 rounded-full" />
           <span className="text-[9px] font-black text-white/80 uppercase tracking-widest">{workflow.user_name}</span>
         </div>
       )}
 
       <div className="absolute inset-x-0 bottom-0 p-4">
         <div className="text-[10px] font-bold text-[#22d3ee] uppercase tracking-wider mb-1 opacity-80">
-          {workflow.category || "General"}
+          {workflow.category || t('card.defaultCategory')}
         </div>
         <h3 className="text-sm font-bold text-white truncate group-hover:text-[#22d3ee] transition-colors">
-          {workflow.name || "Untitled Flow"}
+          {workflow.name || t('card.untitledFlow')}
         </h3>
       </div>
     </div>
@@ -128,6 +137,8 @@ function WorkflowCard({ workflow, onClick, activeTab, onRename, onDelete }) {
 export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggleHeader }) {
   const params = useParams();
   const router = useRouter();
+  const lang = useLang();
+  const t = makeT(workflowStudioDict, lang);
   const slug = params?.slug || [];
   const idFromParams = params?.id;     // exists on /workflow/[id]/[tab] route
   const tabFromParams = params?.tab;   // exists on /workflow/[id]/[tab] route
@@ -230,12 +241,12 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
         if (results[1].status === 'rejected' || results[2].status === 'rejected') {
           console.error("Builder components failed to load:", results[1].reason, results[2].reason);
           if (!nodes.length && !def.nodes?.length) {
-             setError("Failed to load full builder data. Some features may be disabled.");
+             setError(t('error.builderDataFailed'));
           }
         }
       } catch (err) {
         console.error("Critical error loading pulse details:", err);
-        setError("Critical error loading builder: " + err.message);
+        setError(t('error.criticalBuilder')(err.message));
         setNodeSchemas([]);
         setWorkflowDef({ nodes: [], edges: [] });
       } finally {
@@ -253,7 +264,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
         if (!fromUrl) {
           const payload = {
             workflow_id: null,
-            name: "Untitled Workflow",
+            name: t('workflow.untitled'),
             edges: [],
             data: { nodes: [] },
           };
@@ -264,12 +275,12 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
         }
 
         // Initialize state for the new flow
-        setSelectedWorkflow({ id: null, name: "Untitled Workflow" });
+        setSelectedWorkflow({ id: null, name: t('workflow.untitled') });
         setNodeSchemas([]);
         setWorkflowDef({ nodes: [], edges: [] });
         setActiveSubTab("builder");
       } catch (err) {
-        setError("Failed to initialize workflow: " + err.message);
+        setError(t('error.initWorkflow')(err.message));
       } finally {
         setLoading(false);
       }
@@ -278,14 +289,14 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
   );
 
   const handleDeleteWorkflow = async (wfId) => {
-    if (!confirm("Are you sure you want to delete this workflow?")) return;
+    if (!confirm(t('confirm.deleteWorkflow'))) return;
     setIsDeletingId(wfId);
     try {
       await deleteWorkflow(apiKey, wfId);
       setWorkflows((prev) => prev.filter((w) => w.id !== wfId));
     } catch (err) {
       console.error("Delete failed:", err);
-      alert("Failed to delete workflow");
+      alert(t('alert.deleteFailed'));
     } finally {
       setIsDeletingId(null);
     }
@@ -307,7 +318,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
       setRenamingWorkflow(null);
     } catch (err) {
       console.error("Rename failed:", err);
-      alert("Failed to rename workflow");
+      alert(t('alert.renameFailed'));
     }
   };
 
@@ -345,7 +356,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
           // Fallback for deep-linking: attempt to open even if not in the current tab's list
           // handleSelectWorkflow fetches official name/data anyway
           handleSelectWorkflow(
-            { id: urlWorkflowId, name: "Loading..." },
+            { id: urlWorkflowId, name: t('workflow.loadingName') },
             true,
           );
         }
@@ -386,7 +397,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
         setWorkflows(data);
       } catch (err) {
         console.error("Failed to load workflows:", err);
-        setError("Failed to load workflows list.");
+        setError(t('error.loadWorkflowsList'));
       } finally {
         setLoading(false);
       }
@@ -416,7 +427,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
       setResult(data);
     } catch (err) {
       console.error("Execution failed:", err);
-      setError(err.message || "Execution failed");
+      setError(err.message || t('error.executionFailed'));
     } finally {
       setIsExecuting(false);
     }
@@ -445,7 +456,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M19 12H5M12 19l-7-7 7-7" />
                 </svg>
-                All Workflows
+                {t('nav.allWorkflows')}
               </button>
 
               <div className="h-4 w-[1px] bg-white/10" />
@@ -464,7 +475,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                         : "text-white/40 hover:text-white"
                     }`}
                   >
-                    Playground
+                    {t('tab.playground')}
                   </button>
                   <button
                     onClick={() => {
@@ -478,7 +489,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                         : "text-white/40 hover:text-white"
                     }`}
                   >
-                    Full Workflow
+                    {t('tab.fullWorkflow')}
                   </button>
                 </div>
               </div>
@@ -491,7 +502,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
               <button
                 onClick={() => onToggleHeader?.(false)}
                 className="p-1.5 bg-white/5 hover:bg-white/10 rounded-md transition-colors text-white/40 hover:text-white"
-                title="Enter Zen Mode"
+                title={t('title.enterZenMode')}
                 type="button"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -506,7 +517,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
             <button
                onClick={() => router.push("/studio/workflows")}
                className="p-1.5 text-white/40 hover:text-white transition-colors"
-               title="Back to All Workflows"
+               title={t('title.backToAllWorkflows')}
                type="button"
             >
                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -522,7 +533,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                    activeSubTab === "playground" ? "bg-[#22d3ee] text-black" : "text-white/40"
                  }`}
                >
-                 Play
+                 {t('tab.play')}
                </button>
                <button
                  onClick={() => setActiveSubTab("builder")}
@@ -531,7 +542,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                    activeSubTab === "builder" ? "bg-[#22d3ee] text-black" : "text-white/40"
                  }`}
                >
-                 Builder
+                 {t('tab.builderShort')}
                </button>
             </div>
 
@@ -543,7 +554,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
               type="button"
             >
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M4 14h6v6M20 10h-6V4M10 20l-7-7M14 4l7 7"/></svg>
-              Exit Zen
+              {t('action.exitZen')}
             </button>
           </div>
         )}
@@ -557,7 +568,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                   <form onSubmit={handleRun} className="space-y-6">
                     <div>
                       <h3 className="text-xs font-black text-white/30 uppercase tracking-widest mb-4">
-                        Configuration
+                        {t('section.configuration')}
                       </h3>
                       <div className="space-y-4">
                         {inputSchema &&
@@ -578,7 +589,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                                     }
                                     className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-[#22d3ee]/50 transition-colors min-h-[80px] resize-none"
                                     placeholder={
-                                      prop.description || `Enter ${key}...`
+                                      prop.description || t('placeholder.enterField')(key)
                                     }
                                   />
                                 ) : prop.enum ? (
@@ -614,7 +625,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                                     }
                                     className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-[#22d3ee]/50 transition-colors"
                                     placeholder={
-                                      prop.description || `Enter ${key}...`
+                                      prop.description || t('placeholder.enterField')(key)
                                     }
                                   />
                                 )}
@@ -632,7 +643,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                       {isExecuting ? (
                         <>
                           <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                          <span>Generating...</span>
+                          <span>{t('status.generating')}</span>
                         </>
                       ) : (
                         <>
@@ -646,13 +657,13 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                           >
                             <path d="M5 3l14 9-14 9V3z" />
                           </svg>
-                          <span>Run Workflow</span>
+                          <span>{t('action.runWorkflow')}</span>
                         </>
                       )}
                     </button>
                     {!selectedWorkflow.id && (
                       <p className="text-[10px] text-white/30 text-center mt-4">
-                        Save your workflow first to enable execution.
+                        {t('hint.saveFirst')}
                       </p>
                     )}
                   </form>
@@ -679,7 +690,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                     </div>
                     <div className="text-center">
                       <span className="text-[10px] font-black text-red-500 uppercase tracking-widest block mb-1">
-                        Execution Error
+                        {t('error.executionErrorLabel')}
                       </span>
                       <p className="text-white/60 text-sm leading-relaxed">
                         {error}
@@ -703,7 +714,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                       </svg>
                     </div>
                     <p className="text-xs text-white/40 max-w-[200px] mx-auto text-center font-medium">
-                      Configure parameters and run the workflow to see results.
+                      {t('empty.configureAndRun')}
                     </p>
                   </div>
                 )}
@@ -728,10 +739,10 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                     </div>
                     <div className="text-center space-y-2">
                       <div className="text-[10px] font-black text-[#22d3ee] uppercase tracking-[0.3em] animate-pulse">
-                        Running Pipeline
+                        {t('status.runningPipeline')}
                       </div>
                       <div className="text-[13px] text-white/40 font-medium">
-                        Processing nodes and generating assets...
+                        {t('status.processingNodes')}
                       </div>
                     </div>
                   </div>
@@ -741,11 +752,11 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                   <div className="w-full max-w-4xl space-y-8 animate-fade-in-up">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-xs font-black text-white/30 uppercase tracking-widest">
-                        Workflow Results
+                        {t('section.workflowResults')}
                       </h3>
                       <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-[10px] font-bold border border-green-500/20">
                         <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />{" "}
-                        COMPLETED
+                        {t('status.completed')}
                       </div>
                     </div>
 
@@ -759,7 +770,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                             <img
                               src={out.value}
                               className="w-full aspect-square object-cover"
-                              alt="Output"
+                              alt={t('image.outputAlt')}
                             />
                           ) : out.type === "video_url" ? (
                             <video
@@ -821,7 +832,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                   <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-white/5 border-t-[#22d3ee] rounded-full animate-spin" />
                     <div className="text-[10px] font-black text-white/20 uppercase tracking-widest">
-                      Loading Builder...
+                      {t('loading.builder')}
                     </div>
                   </div>
                 </div>
@@ -841,10 +852,10 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
           <div className="flex items-end justify-between">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
-                Workflows
+                {t('page.title')}
               </h1>
               <p className="text-white/40 text-sm font-medium">
-                Create and manage your asynchronous AI processing pipelines
+                {t('page.subtitle')}
               </p>
             </div>
             <button
@@ -864,7 +875,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
-              Create Workflow
+              {t('action.createWorkflow')}
             </button>
           </div>
 
@@ -877,7 +888,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                   : "text-white/30 border-transparent hover:text-white"
               }`}
             >
-              Templates
+              {t('mainTab.templates')}
             </button>
             <button
               onClick={() => setActiveMainTab("my-workflows")}
@@ -887,7 +898,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                   : "text-white/30 border-transparent hover:text-white"
               }`}
             >
-              My Workflows
+              {t('mainTab.myWorkflows')}
             </button>
             <button
               onClick={() => setActiveMainTab("published")}
@@ -897,7 +908,7 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                   : "text-white/30 border-transparent hover:text-white"
               }`}
             >
-              Community
+              {t('mainTab.community')}
             </button>
           </div>
         </div>
@@ -919,13 +930,39 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                    setNewWorkflowName(wf.name);
                 }}
                 onDelete={handleDeleteWorkflow}
+                t={t}
               />
             ))}
             {!loading && workflows.length === 0 && (
-              <div className="col-span-full py-24 text-center border-2 border-dashed border-white/5 rounded-2xl bg-white/[0.02]">
-                <div className="text-white/20 text-sm font-medium italic">
-                  No workflows found in this section.
+              <div className="col-span-full py-20 flex flex-col items-center justify-center animate-fade-in-up transition-all duration-700 relative">
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="w-[460px] h-[460px] bg-[#22d3ee]/10 blur-[150px] rounded-full opacity-70" />
                 </div>
+                <div className="relative z-10 mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#22d3ee] animate-pulse" />
+                  <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-white/60">{t('empty.workflowsBadge')}</span>
+                </div>
+                <h2 className="relative z-10 text-3xl sm:text-4xl md:text-5xl font-black text-center leading-[0.95] tracking-tighter mb-4 px-4">
+                  <span className="block text-white">
+                    {activeMainTab === "my-workflows" ? t('empty.buildFirst') : t('empty.nothingHere')}
+                  </span>
+                  <span className="block bg-gradient-to-r from-[#22d3ee] via-[#38bdf8] to-[#a855f7] bg-clip-text text-transparent">
+                    {activeMainTab === "my-workflows" ? t('empty.aiPipeline') : t('empty.yet')}
+                  </span>
+                </h2>
+                <p className="relative z-10 text-white/50 text-sm md:text-base font-medium text-center max-w-md leading-relaxed mb-8 px-4">
+                  {activeMainTab === "my-workflows"
+                    ? t('empty.pipelineDesc')
+                    : t('empty.noWorkflowsSection')}
+                </p>
+                {activeMainTab === "my-workflows" && (
+                  <button
+                    onClick={() => handleCreateWorkflow()}
+                    className="relative z-10 text-[11px] font-bold uppercase tracking-widest text-black bg-[#22d3ee] hover:bg-[#e5ff33] px-5 py-2.5 rounded-lg transition-all hover:scale-105 active:scale-95"
+                  >
+                    {t('action.createWorkflowPlus')}
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -940,18 +977,18 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
             onSubmit={handleRenameWorkflow}
             className="relative w-full max-w-sm bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 shadow-2xl animate-in fade-in zoom-in duration-300"
           >
-            <h3 className="text-xl font-bold text-white mb-2">Rename Workflow</h3>
-            <p className="text-white/40 text-sm mb-6">Enter a new descriptive name for your pipeline.</p>
+            <h3 className="text-xl font-bold text-white mb-2">{t('modal.renameWorkflowTitle')}</h3>
+            <p className="text-white/40 text-sm mb-6">{t('modal.renameWorkflowDesc')}</p>
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-[#22d3ee] uppercase tracking-widest">Workflow Name</label>
+                <label className="text-[10px] font-black text-[#22d3ee] uppercase tracking-widest">{t('label.workflowName')}</label>
                 <input
                   autoFocus
                   type="text"
                   value={newWorkflowName}
                   onChange={(e) => setNewWorkflowName(e.target.value)}
-                  placeholder="e.g. Cinematic Video Flow"
+                  placeholder={t('placeholder.workflowNameExample')}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#22d3ee]/50 transition-colors"
                 />
               </div>
@@ -962,13 +999,13 @@ export default function WorkflowStudio({ apiKey, isHeaderVisible = true, onToggl
                   onClick={() => setRenamingWorkflow(null)}
                   className="flex-1 px-4 py-3 text-xs font-black text-white/40 uppercase tracking-widest hover:text-white transition-colors"
                 >
-                  Cancel
+                  {t('action.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="flex-1 bg-[#22d3ee] text-black px-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white transition-all transform hover:scale-105 active:scale-95"
                 >
-                  Save Name
+                  {t('action.saveName')}
                 </button>
               </div>
             </div>

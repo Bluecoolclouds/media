@@ -1819,10 +1819,22 @@ const CanvasArea = forwardRef(
       <div
         className="relative w-full h-full bg-bg-page overflow-hidden"
         ref={containerRef}
+        style={{
+          backgroundImage: "radial-gradient(var(--grid-dot) 1px, transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
       >
-        <div ref={stageWrapperRef} className="absolute inset-0">
+        {/* Ambient floor: drifting gradient blobs behind the stage. Fixed to
+            the viewport (doesn't pan/zoom with the canvas) so it reads as
+            the room the canvas floats in, not part of the artwork. */}
+        <div className="canvas-ambience" aria-hidden="true">
+          <div className="canvas-ambience__blob canvas-ambience__blob--a" />
+          <div className="canvas-ambience__blob canvas-ambience__blob--b" />
+        </div>
+
+        <div ref={stageWrapperRef} className="absolute inset-0 z-[1]">
           <Stage
             width={canvasSize.width}
             height={canvasSize.height}

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { runClipping, uploadFile } from "../muapi.js";
+import { useLang, makeT } from "../i18n/useLang";
+import { clippingStudioDict } from "../i18n/dictionaries/clippingStudio";
 
 // ---------------------------------------------------------------------------
 // Inline SVG Icons
@@ -95,6 +97,9 @@ export default function ClippingStudio({
 }) {
   const PERSIST_KEY = "hg_clipping_studio_persistent";
 
+  const lang = useLang();
+  const t = makeT(clippingStudioDict, lang);
+
   // ── Clipping Parameters State ───────────────────────────────────────────
   const [videoUrl, setVideoUrl] = useState("");
   const [numHighlights, setNumHighlights] = useState(3);
@@ -129,12 +134,12 @@ export default function ClippingStudio({
   const [history, setHistory] = useState([]);
 
   const ASPECT_RATIOS = [
-    { label: "9:16 (TikTok / Reels / Shorts)", value: "9:16" },
-    { label: "16:9 (YouTube / TV)", value: "16:9" },
-    { label: "1:1 (Instagram Square)", value: "1:1" },
-    { label: "4:5 (Instagram Portrait)", value: "4:5" },
-    { label: "4:3 (Classic Video)", value: "4:3" },
-    { label: "3:4 (Portrait)", value: "3:4" },
+    { label: t('aspectRatio.9:16'), value: "9:16" },
+    { label: t('aspectRatio.16:9'), value: "16:9" },
+    { label: t('aspectRatio.1:1'), value: "1:1" },
+    { label: t('aspectRatio.4:5'), value: "4:5" },
+    { label: t('aspectRatio.4:3'), value: "4:3" },
+    { label: t('aspectRatio.3:4'), value: "3:4" },
   ];
 
   // Close dropdown when clicking outside
@@ -222,7 +227,7 @@ export default function ClippingStudio({
           })
           .catch(err => {
             setVideoUploading(false);
-            alert(`Failed to upload dropped file: ${err.message}`);
+            alert(t('alert.uploadDroppedFailed')(err.message));
           });
       }
       onFilesHandled?.();
@@ -261,7 +266,7 @@ export default function ClippingStudio({
   // ── Copy Link & Download Helpers ─────────────────────────────────────────
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    alert("URL copied to clipboard!");
+    alert(t('alert.urlCopied'));
   };
 
   const downloadVideo = async (url, title = "clipped_video") => {
@@ -294,7 +299,7 @@ export default function ClippingStudio({
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 100 * 1024 * 1024) {
-      alert("Video exceeds 100MB limit.");
+      alert(t('alert.videoExceeds100MB'));
       return;
     }
     setVideoUploading(true);
@@ -306,7 +311,7 @@ export default function ClippingStudio({
       setVideoUrl(url);
     } catch (err) {
       console.error("[ClippingStudio] Video upload failed:", err);
-      alert(`Video upload failed: ${err.message}`);
+      alert(t('alert.videoUploadFailed')(err.message));
     } finally {
       setVideoUploading(false);
       setVideoProgress(0);
@@ -321,7 +326,7 @@ export default function ClippingStudio({
   // ── Dispatch Run / Call submitAndPoll ────────────────────────────────────
   const handleGenerate = async () => {
     if (!videoUrl) {
-      alert("Please upload a video or paste a video URL first.");
+      alert(t('alert.uploadOrPasteFirst'));
       return;
     }
 
@@ -356,7 +361,7 @@ export default function ClippingStudio({
       // Mock coordinates if API succeeded but modal coordinates are empty in coordinate-only mode
       if (returnCoordinatesOnly && newResult.coordinates.length === 0) {
         newResult.coordinates = Array.from({ length: numHighlights }).map((_, idx) => ({
-          label: `Highlight #${idx + 1}`,
+          label: t('timeline.highlightFallback')(idx + 1),
           start_time: idx * 15,
           end_time: (idx + 1) * 15,
           start: idx * 15,
@@ -380,7 +385,7 @@ export default function ClippingStudio({
       }
     } catch (err) {
       console.error("[ClippingStudio] Error generating clips:", err);
-      setGenerateError(err.message || "Failed to process AI clipping.");
+      setGenerateError(err.message || t('error.failedToProcess'));
     } finally {
       setIsGenerating(false);
     }
@@ -408,38 +413,88 @@ export default function ClippingStudio({
           </div>
         )}
 
-        {/* 1. Empty State (No history, no result active) */}
-        {!result && history.length === 0 && (
-          <div className="flex-grow flex flex-col items-center justify-center animate-fade-in-up transition-all duration-700 min-h-[55vh]">
-            <div className="mb-12 relative group">
-              <div className="absolute inset-0 bg-primary/10 blur-[120px] rounded-full opacity-30 group-hover:opacity-60 transition-opacity duration-1000" />
-              <div className="relative w-24 h-24 md:w-32 md:h-32 bg-white/[0.02] rounded-[2rem] flex items-center justify-center border border-white/[0.05] overflow-hidden backdrop-blur-sm">
-                <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10 relative z-10 transition-transform duration-500 group-hover:scale-110">
-                  <ScissorsIcon className="text-primary opacity-80 w-8 h-8" />
-                </div>
-                <div className="absolute top-4 right-4 text-[10px] text-primary/40 animate-pulse">✨</div>
+        {/* 0. Generating / Loading View */}
+        {isGenerating && !generateError && (
+          <div className="flex flex-col items-center justify-center animate-fade-in transition-all duration-700 min-h-[55vh] relative">
+            {/* Ambient glow */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[420px] h-[420px] bg-[#22d3ee]/15 blur-[140px] rounded-full animate-pulse" />
+            </div>
+            <div className="relative z-10 mb-8">
+              <div className="w-24 h-24 border-[3px] border-white/10 border-t-[#22d3ee] rounded-full animate-spin shadow-glow" />
+              <div className="absolute inset-0 flex items-center justify-center text-[#22d3ee]">
+                <ScissorsIcon className="animate-pulse text-[#22d3ee] w-7 h-7" />
               </div>
             </div>
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight mb-4 text-center px-4">
-              <span className="text-white/40 font-medium">START CREATING WITH</span><br />
-              <span className="text-white">AI CLIPPING STUDIO</span>
+            <div className="relative z-10 text-center space-y-2">
+              <div className="text-xs font-black text-[#22d3ee] uppercase tracking-[0.3em]">
+                {t('generating.status')(elapsedTime)}
+              </div>
+              <div className="text-sm text-white/50 font-medium">
+                {t('generating.subtitle')}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 1. Empty State (No history, no result active) */}
+        {!result && history.length === 0 && !isGenerating && (
+          <div className="flex-grow flex flex-col items-center justify-center animate-fade-in-up transition-all duration-700 min-h-[60vh] relative">
+            {/* Ambient glow */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[560px] h-[560px] bg-[#22d3ee]/10 blur-[160px] rounded-full opacity-70" />
+            </div>
+
+            {/* Eyebrow badge */}
+            <div className="relative z-10 mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22d3ee] animate-pulse" />
+              <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-white/60">
+                {t('badge.aiClipping')}
+              </span>
+            </div>
+
+            {/* Big cinematic headline */}
+            <h1 className="relative z-10 text-4xl sm:text-6xl md:text-7xl font-black text-center leading-[0.92] tracking-tighter mb-6 px-4">
+              <span className="block text-white">{t('empty.headline1')}</span>
+              <span className="block bg-gradient-to-r from-[#22d3ee] via-[#38bdf8] to-[#a855f7] bg-clip-text text-transparent">
+                {t('empty.headline2')}
+              </span>
             </h1>
-            <p className="text-white/40 text-sm md:text-base font-medium tracking-wide text-center max-w-lg leading-relaxed">
-              Extract viral highlights and timings from your videos automatically
+
+            <p className="relative z-10 text-white/50 text-base md:text-lg font-medium text-center max-w-xl leading-relaxed mb-10 px-4">
+              {t('empty.subtitle')}
             </p>
+
+            {/* Quick-pick aspect ratio chips */}
+            <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 max-w-2xl px-4">
+              {ASPECT_RATIOS.slice(0, 4).map((r) => (
+                <button
+                  key={r.value}
+                  type="button"
+                  onClick={() => setAspectRatio(r.value)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 border ${
+                    aspectRatio === r.value
+                      ? "bg-[#22d3ee]/10 text-white border-[#22d3ee]/50"
+                      : "text-white/70 bg-white/[0.04] border-white/10 hover:border-[#22d3ee]/50 hover:text-white hover:bg-[#22d3ee]/10"
+                  }`}
+                >
+                  {r.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
         {/* 2. History Gallery List (Active result is null, history has items) */}
-        {!result && history.length > 0 && (
+        {!result && history.length > 0 && !isGenerating && (
           <div className="space-y-6 pt-4">
             <div className="flex items-center justify-between border-b border-white/5 pb-4">
               <h2 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
                 <ScissorsIcon className="text-primary w-4 h-4" />
-                Clipping History Runs
+                {t('history.title')}
               </h2>
               <span className="text-xs font-bold text-zinc-400 bg-white/5 border border-white/5 px-2.5 py-1 rounded">
-                {history.length} Saved Generations
+                {t('history.savedGenerations')(history.length)}
               </span>
             </div>
 
@@ -469,7 +524,7 @@ export default function ClippingStudio({
                     <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       <button
                         type="button"
-                        title="Delete from history"
+                        title={t('history.deleteTooltip')}
                         onClick={(e) => {
                           e.stopPropagation();
                           setHistory((prev) => prev.filter((h) => h.id !== entry.id));
@@ -486,10 +541,10 @@ export default function ClippingStudio({
                   >
                     <div className="flex flex-col gap-1">
                       <h4 className="text-xs font-bold text-white truncate" title={entry.videoUrl.split('/').pop()}>
-                        {entry.videoUrl.split('/').pop() || "source_video.mp4"}
+                        {entry.videoUrl.split('/').pop() || t('history.defaultFilename')}
                       </h4>
                       <p className="text-[9px] text-zinc-500 font-semibold uppercase tracking-wider">
-                        {entry.returnCoordinatesOnly ? "Timeline Seek Mode" : "Clips Gallery Mode"}
+                        {entry.returnCoordinatesOnly ? t('mode.timelineSeek') : t('mode.clipsGallery')}
                       </p>
                     </div>
                     <div className="flex items-center justify-between mt-1">
@@ -497,7 +552,7 @@ export default function ClippingStudio({
                         {entry.aspectRatio}
                       </span>
                       <span className="text-[10px] text-white/40">
-                        {entry.returnCoordinatesOnly ? `${entry.coordinates?.length || 0} Highlights` : `${entry.clips?.length || 0} Clips`}
+                        {entry.returnCoordinatesOnly ? t('history.highlightsCount')(entry.coordinates?.length || 0) : t('history.clipsCount')(entry.clips?.length || 0)}
                       </span>
                     </div>
                   </div>
@@ -508,7 +563,7 @@ export default function ClippingStudio({
         )}
 
         {/* 3. Active Result Preview (Result is loaded) */}
-        {result && (
+        {result && !isGenerating && (
           <div className="flex-1 flex flex-col min-h-0">
             {/* Header / Back Action */}
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-white/5">
@@ -521,11 +576,11 @@ export default function ClippingStudio({
                   <line x1="19" y1="12" x2="5" y2="12" />
                   <polyline points="12 19 5 12 12 5" />
                 </svg>
-                Back to History
+                {t('result.backToHistory')}
               </button>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-bold text-primary bg-primary/10 border border-primary/20 px-2.5 py-0.5 rounded">
-                  {result.returnCoordinatesOnly ? "Timeline Seek Mode" : "Clips Gallery Mode"}
+                  {result.returnCoordinatesOnly ? t('mode.timelineSeek') : t('mode.clipsGallery')}
                 </span>
                 <span className="text-[10px] text-zinc-400 bg-white/5 border border-white/5 px-2.5 py-0.5 rounded">
                   {result.aspectRatio}
@@ -539,7 +594,7 @@ export default function ClippingStudio({
                 {/* Left Side: Original Player */}
                 <div className="flex-1 bg-black border border-zinc-900 rounded-lg overflow-hidden flex flex-col shadow-2xl relative min-h-[300px] lg:min-h-0">
                   <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-md border border-white/5 z-10 text-[10px] uppercase font-bold tracking-wider text-primary">
-                    Original Video Player
+                    {t('timeline.originalPlayer')}
                   </div>
                   <video
                     ref={mainVideoRef}
@@ -554,10 +609,10 @@ export default function ClippingStudio({
                 <div className="w-full lg:w-[350px] border border-zinc-900 bg-zinc-950/40 backdrop-blur-md rounded-lg p-5 flex flex-col min-h-[350px] lg:min-h-0">
                   <div className="pb-4 border-b border-zinc-900 flex items-center justify-between">
                     <h3 className="text-xs font-black text-white uppercase tracking-widest">
-                      Highlights Timeline
+                      {t('timeline.highlightsTitle')}
                     </h3>
                     <span className="text-[10px] font-bold text-zinc-400 bg-zinc-900 px-2 py-0.5 rounded border border-zinc-800">
-                      {result.coordinates?.length || 0} Matches
+                      {t('timeline.matchesCount')(result.coordinates?.length || 0)}
                     </span>
                   </div>
 
@@ -584,11 +639,11 @@ export default function ClippingStudio({
                           >
                             <div className="flex items-center justify-between w-full">
                               <span className={`text-xs font-bold transition-colors ${isActive ? "text-primary" : "text-white"}`}>
-                                {hl.label || `Highlight #${i + 1}`}
+                                {hl.label || t('timeline.highlightFallback')(i + 1)}
                               </span>
                               {hl.score && (
                                 <span className="text-[9px] font-black text-emerald-400 bg-emerald-400/10 px-1.5 py-0.5 rounded border border-emerald-400/20">
-                                  {(hl.score * 100).toFixed(0)}% Score
+                                  {t('timeline.scorePercent')((hl.score * 100).toFixed(0))}
                                 </span>
                               )}
                             </div>
@@ -596,18 +651,18 @@ export default function ClippingStudio({
                               <ClockIcon />
                               <span>{formatSeconds(start)} - {formatSeconds(end)}</span>
                               <span className="text-zinc-650">•</span>
-                              <span className="text-primary/80 font-bold">{(end - start).toFixed(0)}s duration</span>
+                              <span className="text-primary/80 font-bold">{t('timeline.durationSeconds')((end - start).toFixed(0))}</span>
                             </div>
                             
                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary mt-1 opacity-0 group-hover/hl:opacity-100 transition-opacity">
-                              <PlayIcon /> Seek & Play
+                              <PlayIcon /> {t('timeline.seekAndPlay')}
                             </div>
                           </button>
                         );
                       })
                     ) : (
                       <div className="text-center py-8 text-xs text-zinc-500 font-semibold">
-                        No highlights extracted.
+                        {t('timeline.noHighlights')}
                       </div>
                     )}
                   </div>
@@ -618,10 +673,10 @@ export default function ClippingStudio({
               <div className="space-y-5">
                 <div className="flex items-center justify-between border-b border-zinc-900 pb-3.5">
                   <h3 className="text-xs font-black text-white uppercase tracking-widest">
-                    Extracted Video Clips
+                    {t('clips.extractedTitle')}
                   </h3>
                   <span className="text-[10px] font-bold text-zinc-400 bg-zinc-900 px-2.5 py-1 rounded border border-zinc-800">
-                    Aspect Ratio: {result.aspectRatio}
+                    {t('clips.aspectRatioLabel')(result.aspectRatio)}
                   </span>
                 </div>
 
@@ -652,7 +707,7 @@ export default function ClippingStudio({
                           <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover/vid:opacity-100 transition-opacity z-10">
                             <button
                               type="button"
-                              title="Fullscreen"
+                              title={t('clips.fullscreenTooltip')}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setFullscreenUrl(clipUrl);
@@ -668,7 +723,7 @@ export default function ClippingStudio({
                             </button>
                             <button
                               type="button"
-                              title="Copy Link"
+                              title={t('clips.copyLinkTooltip')}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 copyToClipboard(clipUrl);
@@ -679,7 +734,7 @@ export default function ClippingStudio({
                             </button>
                             <button
                               type="button"
-                              title="Download"
+                              title={t('clips.downloadTooltip')}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 downloadVideo(clipUrl, `clip-${i + 1}.mp4`);
@@ -691,14 +746,14 @@ export default function ClippingStudio({
                           </div>
 
                           <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded border border-white/5 text-[9px] uppercase font-black tracking-wider text-primary">
-                            Clip #{i + 1}
+                            {t('clips.clipNumber')(i + 1)}
                           </div>
                         </div>
 
                         <div className="p-3 bg-black/80 backdrop-blur-sm border-t border-white/5 flex-1 flex flex-col justify-between gap-2">
                           <div className="flex items-center justify-between mt-1">
                             <span className="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded border border-primary/20 whitespace-nowrap">
-                              Clip #{i + 1}
+                              {t('clips.clipNumber')(i + 1)}
                             </span>
                             <span className="text-[10px] text-white/40">{result.aspectRatio}</span>
                           </div>
@@ -708,7 +763,7 @@ export default function ClippingStudio({
                   </div>
                 ) : (
                   <div className="py-20 text-center text-xs text-zinc-500 font-semibold border border-zinc-900 rounded bg-zinc-950/20">
-                    No video clips generated. Try re-running.
+                    {t('clips.noneGenerated')}
                   </div>
                 )}
               </div>
@@ -720,7 +775,7 @@ export default function ClippingStudio({
 
       {/* ─── FLOATING BOTTOM PROMPT BAR ─── */}
       <div className="absolute bottom-4 w-full max-w-[95%] lg:max-w-4xl z-40 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
-        <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-3xl rounded-md border border-white/10 p-4 flex flex-col gap-2 shadow-2xl">
+        <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-3xl rounded-2xl border border-white/10 p-4 flex flex-col gap-2 shadow-2xl ring-1 ring-[#22d3ee]/10">
           
           {/* Upper row: upload button & paste input field */}
           <div className="flex items-center gap-3 px-1">
@@ -736,7 +791,7 @@ export default function ClippingStudio({
             {/* Sleek round upload button */}
             <button
               type="button"
-              title={videoUrl ? "Clear video" : "Upload source video"}
+              title={videoUrl ? t('prompt.clearVideoTooltip') : t('prompt.uploadVideoTooltip')}
               onClick={() => videoUrl ? clearVideoUpload() : videoFileInputRef.current?.click()}
               className={`w-10 h-10 shrink-0 rounded-full border transition-all flex items-center justify-center relative overflow-hidden ${
                 videoUrl 
@@ -787,7 +842,7 @@ export default function ClippingStudio({
                 ref={textareaRef}
                 value={videoUrl}
                 onChange={handleUrlInput}
-                placeholder="Upload a video file or paste a video S3 URL here..."
+                placeholder={t('prompt.placeholder')}
                 rows={1}
                 className="w-full bg-transparent border-none text-white text-sm placeholder:text-white/20 focus:outline-none resize-none pt-1 leading-relaxed min-h-[40px] max-h-[150px] overflow-y-auto custom-scrollbar disabled:opacity-40"
               />
@@ -799,7 +854,7 @@ export default function ClippingStudio({
                 type="button"
                 onClick={clearVideoUpload}
                 className="p-1.5 hover:bg-white/5 rounded text-zinc-400 hover:text-white transition-colors self-start mt-1"
-                title="Clear input"
+                title={t('prompt.clearInputTooltip')}
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <line x1="18" y1="6" x2="6" y2="18" />
@@ -819,7 +874,7 @@ export default function ClippingStudio({
                   <span className="text-[9px] font-bold text-black uppercase">C</span>
                 </div>
                 <span className="text-[11px] font-semibold text-white/70">
-                  AI Clipping
+                  {t('badge.aiClipping')}
                 </span>
               </div>
 
@@ -841,7 +896,7 @@ export default function ClippingStudio({
                 {aspectDropdownOpen && (
                   <div className="absolute bottom-[calc(100%+12px)] left-0 z-50 bg-[#0a0a0a] rounded-lg p-3 shadow-2xl border border-white/[0.05] min-w-[160px]">
                     <div className="text-xs font-bold text-white/20 border-b border-white/[0.03] mb-2">
-                      Aspect Ratio
+                      {t('dropdown.aspectRatioLabel')}
                     </div>
                     <div className="flex flex-col gap-1 max-h-60 overflow-y-auto custom-scrollbar">
                       {ASPECT_RATIOS.map((r) => (
@@ -873,18 +928,18 @@ export default function ClippingStudio({
                 >
                   <ClockIcon />
                   <span className="text-[11px] font-semibold text-white/70 group-hover:text-[#22d3ee] transition-colors">
-                    {numHighlights} Highlights
+                    {t('dropdown.highlightsCount')(numHighlights)}
                   </span>
                   <ChevronDownIcon />
                 </button>
                 {highlightsDropdownOpen && (
                   <div className="absolute bottom-[calc(100%+12px)] left-0 z-50 bg-[#0a0a0a] rounded-md p-3 shadow-2xl border border-white/10 min-w-[180px]">
                     <div className="text-xs font-bold text-white/20 border-b border-white/[0.03] mb-3">
-                      Max Highlights
+                      {t('dropdown.maxHighlights')}
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-white/60">Limit:</span>
+                        <span className="text-xs text-white/60">{t('dropdown.limitLabel')}</span>
                         <span className="text-xs font-black text-primary bg-primary/10 px-2.5 py-0.5 rounded">
                           {numHighlights}
                         </span>
@@ -914,7 +969,7 @@ export default function ClippingStudio({
                 }`}
               >
                 <ScissorsIcon className="w-3.5 h-3.5 text-current" />
-                <span>Coordinates Only</span>
+                <span>{t('toggle.coordinatesOnly')}</span>
               </button>
 
             </div>
@@ -934,7 +989,7 @@ export default function ClippingStudio({
               ) : (
                 <>
                   <ScissorsIcon className="text-black w-4 h-4" />
-                  <span>Generate</span>
+                  <span>{t('button.generate')}</span>
                 </>
               )}
             </button>

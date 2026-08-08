@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { generateAudio, uploadFile } from "../muapi.js";
 import { audioModels, getAudioModelById } from "../models.js";
+import { useLang, makeT } from "../i18n/useLang";
+import { audioStudioDict } from "../i18n/dictionaries/audioStudio";
 
 // ---------------------------------------------------------------------------
 // Upload button states
@@ -64,7 +66,7 @@ const TrashIcon = () => (
 // ---------------------------------------------------------------------------
 // Single File Uploader Component
 // ---------------------------------------------------------------------------
-function AudioFileUploader({ label, value, onChange, apiKey }) {
+function AudioFileUploader({ label, value, onChange, apiKey, t }) {
   const [uploadState, setUploadState] = useState(value ? UPLOAD_STATE.READY : UPLOAD_STATE.IDLE);
   const [progress, setProgress] = useState(0);
   const [fileName, setFileName] = useState(value ? value.split('/').pop().slice(-30) : "");
@@ -86,7 +88,7 @@ function AudioFileUploader({ label, value, onChange, apiKey }) {
     if (!file) return;
 
     if (file.size > 20 * 1024 * 1024) {
-      alert("Audio file exceeds 20MB limit.");
+      alert(t('upload.exceedsLimit'));
       return;
     }
 
@@ -102,7 +104,7 @@ function AudioFileUploader({ label, value, onChange, apiKey }) {
       onChange(url);
     } catch (err) {
       setUploadState(UPLOAD_STATE.IDLE);
-      alert(`Upload failed: ${err.message}`);
+      alert(t('upload.uploadFailed')(err.message));
     } finally {
       setProgress(0);
     }
@@ -125,7 +127,7 @@ function AudioFileUploader({ label, value, onChange, apiKey }) {
             onClick={clearFile}
             className="text-xs font-bold text-red-400 hover:text-red-300 transition-colors uppercase tracking-wider flex items-center gap-1.5"
           >
-            <TrashIcon /> Clear
+            <TrashIcon /> {t('upload.clear')}
           </button>
         )}
       </div>
@@ -154,8 +156,8 @@ function AudioFileUploader({ label, value, onChange, apiKey }) {
               </svg>
             </div>
             <div className="text-left">
-              <div className="text-xs font-bold text-white">Upload audio track</div>
-              <div className="text-[11px] text-zinc-300 font-medium mt-0.5">MP3, WAV, M4A up to 20MB</div>
+              <div className="text-xs font-bold text-white">{t('upload.trackLabel')}</div>
+              <div className="text-[11px] text-zinc-300 font-medium mt-0.5">{t('upload.formats')}</div>
             </div>
           </>
         )}
@@ -164,7 +166,7 @@ function AudioFileUploader({ label, value, onChange, apiKey }) {
           <div className="w-full flex items-center gap-4">
             <div className="flex-1">
               <div className="flex justify-between text-xs text-white/95 mb-1.5 font-bold">
-                <span>Uploading...</span>
+                <span>{t('upload.uploading')}</span>
                 <span>{progress}%</span>
               </div>
               <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
@@ -181,7 +183,7 @@ function AudioFileUploader({ label, value, onChange, apiKey }) {
             </div>
             <div className="text-left flex-1 min-w-0">
               <div className="text-xs font-bold text-white truncate">{fileName}</div>
-              <div className="text-[11px] text-primary font-bold mt-0.5">Ready to generate</div>
+              <div className="text-[11px] text-primary font-bold mt-0.5">{t('upload.readyToGenerate')}</div>
             </div>
           </>
         )}
@@ -193,7 +195,7 @@ function AudioFileUploader({ label, value, onChange, apiKey }) {
 // ---------------------------------------------------------------------------
 // Multiple File Uploader Component (for array fields like audios_list)
 // ---------------------------------------------------------------------------
-function AudioListUploader({ label, value = [], onChange, apiKey, maxItems = 2 }) {
+function AudioListUploader({ label, value = [], onChange, apiKey, maxItems = 2, t }) {
   const handleItemChange = (index, url) => {
     const newItems = [...value];
     if (url) {
@@ -207,16 +209,17 @@ function AudioListUploader({ label, value = [], onChange, apiKey, maxItems = 2 }
   return (
     <div className="space-y-4">
       <label className="block text-xs font-bold text-zinc-200 uppercase tracking-wider">
-        {label} (Max {maxItems})
+        {label} {t('label.max')(maxItems)}
       </label>
       <div className="space-y-3">
         {Array.from({ length: maxItems }).map((_, i) => (
           <AudioFileUploader
             key={i}
-            label={`Track #${i + 1}`}
+            label={t('label.trackNumber')(i + 1)}
             value={value[i] || null}
             onChange={(url) => handleItemChange(i, url)}
             apiKey={apiKey}
+            t={t}
           />
         ))}
       </div>
@@ -227,7 +230,7 @@ function AudioListUploader({ label, value = [], onChange, apiKey, maxItems = 2 }
 // ---------------------------------------------------------------------------
 // Premium Custom Audio Player with Waveform Animation
 // ---------------------------------------------------------------------------
-function PremiumAudioPlayer({ url, title }) {
+function PremiumAudioPlayer({ url, title, t }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -384,9 +387,9 @@ function PremiumAudioPlayer({ url, title }) {
         </div>
         <div className="text-center px-4 max-w-full relative z-10">
           <span className="text-xs font-black text-primary uppercase tracking-[0.2em] block mb-1">
-            Now Playing
+            {t('player.nowPlaying')}
           </span>
-          <p className="text-white font-bold text-base truncate max-w-xs">{title || "Generated Track"}</p>
+          <p className="text-white font-bold text-base truncate max-w-xs">{title || t('player.generatedTrackFallback')}</p>
         </div>
       </div>
 
@@ -425,7 +428,7 @@ function PremiumAudioPlayer({ url, title }) {
             <button
               onClick={toggleMute}
               className="p-2 bg-zinc-800/80 border border-zinc-700 hover:bg-zinc-700 rounded text-zinc-200 hover:text-white transition-all"
-              title="Mute/Unmute"
+              title={t('player.muteUnmute')}
               type="button"
             >
               {isMuted ? <VolumeMuteIcon /> : <VolumeIcon />}
@@ -445,7 +448,7 @@ function PremiumAudioPlayer({ url, title }) {
           <button
             onClick={togglePlay}
             className="w-12 h-12 bg-primary hover:bg-white text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-glow"
-            title={isPlaying ? "Pause" : "Play"}
+            title={isPlaying ? t('player.pause') : t('player.play')}
             type="button"
           >
             {isPlaying ? <PauseIcon /> : <PlayIcon />}
@@ -455,13 +458,13 @@ function PremiumAudioPlayer({ url, title }) {
           <button
             onClick={downloadAudio}
             className="px-4 py-2 bg-zinc-800/80 hover:bg-zinc-700 border border-zinc-700 rounded text-xs font-bold text-white flex items-center gap-2 hover:border-primary/45 transition-all"
-            title="Download Audio"
+            title={t('player.downloadAudio')}
             type="button"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
             </svg>
-            <span>Save</span>
+            <span>{t('player.save')}</span>
           </button>
         </div>
       </div>
@@ -480,6 +483,9 @@ export default function AudioStudio({
   onFilesHandled,
 }) {
   const PERSIST_KEY = "hg_audio_studio_persistent";
+
+  const lang = useLang();
+  const t = makeT(audioStudioDict, lang);
 
   // ── Mode & model state ──────────────────────────────────────────────────
   const [selectedModelId, setSelectedModelId] = useState(audioModels[0]?.id ?? "");
@@ -574,7 +580,7 @@ export default function AudioStudio({
             .then(url => {
               setParams(prev => ({ ...prev, [key]: url }));
             })
-            .catch(err => alert(`Failed to upload dropped file: ${err.message}`));
+            .catch(err => alert(t('upload.dropFailed')(err.message)));
         } else if (firstAudioListField) {
           const [key] = firstAudioListField;
           uploadFile(apiKey, audioFiles[0], () => {})
@@ -585,7 +591,7 @@ export default function AudioStudio({
                 return { ...prev, [key]: currentList };
               });
             })
-            .catch(err => alert(`Failed to upload dropped file: ${err.message}`));
+            .catch(err => alert(t('upload.dropFailed')(err.message)));
         }
       }
       onFilesHandled?.();
@@ -599,7 +605,7 @@ export default function AudioStudio({
 
   const handleSelectHistory = (entry, index) => {
     setActiveResultUrl(entry.url);
-    setActiveResultTitle(entry.title || entry.prompt || "Generated Track");
+    setActiveResultTitle(entry.title || entry.prompt || t('player.generatedTrackFallback'));
     setActiveHistoryIdx(index);
     setView("result");
   };
@@ -611,7 +617,7 @@ export default function AudioStudio({
     if (selectedModel.required) {
       for (const field of selectedModel.required) {
         if (!params[field] || (Array.isArray(params[field]) && params[field].length === 0)) {
-          alert(`Please complete the required field: ${selectedModel.inputs?.[field]?.title || field}`);
+          alert(t('generate.requiredField')(selectedModel.inputs?.[field]?.title || field));
           return;
         }
       }
@@ -630,10 +636,10 @@ export default function AudioStudio({
       const res = await generateAudio(apiKey, audioParams);
 
       if (!res?.url) {
-        throw new Error("No audio URL returned by the API.");
+        throw new Error(t('error.noAudioUrl'));
       }
 
-      const title = params.title || params.prompt || `Generated ${selectedModel.name}`;
+      const title = params.title || params.prompt || t('generate.generatedFallbackTitle')(selectedModel.name);
       const entry = {
         id: res.id || Date.now().toString(),
         url: res.url,
@@ -660,7 +666,7 @@ export default function AudioStudio({
       }
     } catch (e) {
       console.error("[AudioStudio]", e);
-      setGenerateError(e.message?.slice(0, 100) ?? "Audio generation failed");
+      setGenerateError(e.message?.slice(0, 100) ?? t('error.generationFailed'));
     } finally {
       setIsGenerating(false);
     }
@@ -677,21 +683,21 @@ export default function AudioStudio({
     <div className="w-full h-full flex bg-app-bg text-white overflow-hidden relative">
       
       {/* ─── LEFT CONFIGURATION SIDEBAR ─── */}
-      <div className="w-full lg:w-[400px] border-r border-zinc-900 flex flex-col bg-zinc-950/40 backdrop-blur-lg flex-shrink-0 z-30">
+      <div className="w-full lg:w-[400px] border-r border-white/[0.05] flex flex-col bg-[#0a0a0a]/60 backdrop-blur-2xl flex-shrink-0 z-30">
         <div className="p-6 overflow-y-auto flex-1 custom-scrollbar space-y-6 pb-24">
           
           {/* Model Selector */}
           <div className="space-y-2 relative">
             <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
-              Audio Model
+              {t('sidebar.audioModel')}
             </label>
             <button
               ref={modelBtnRef}
               type="button"
               onClick={() => setOpenDropdown(!openDropdown)}
-              className="w-full bg-zinc-900 border border-zinc-700 rounded px-4 py-3.5 text-sm text-left font-bold text-white flex items-center justify-between hover:bg-zinc-850 hover:border-primary/50 transition-all"
+              className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3.5 text-sm text-left font-bold text-white flex items-center justify-between hover:bg-white/[0.06] hover:border-[#22d3ee]/50 transition-all"
             >
-              <span>{selectedModel?.name ?? "Select Model"}</span>
+              <span>{selectedModel?.name ?? t('sidebar.selectModel')}</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`transition-transform duration-200 ${openDropdown ? 'rotate-180' : ''}`}>
                 <polyline points="6 9 12 15 18 9" />
               </svg>
@@ -726,7 +732,7 @@ export default function AudioStudio({
           {/* Model Description */}
           {selectedModel?.description && (
             <div className="">
-              <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1.5">Description</span>
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider block mb-1.5">{t('sidebar.description')}</span>
               <p className="text-zinc-400 text-xs leading-relaxed font-semibold">{selectedModel.description}</p>
             </div>
           )}
@@ -745,6 +751,7 @@ export default function AudioStudio({
                     value={params[key] || ""}
                     onChange={(url) => setParams(prev => ({ ...prev, [key]: url }))}
                     apiKey={apiKey}
+                    t={t}
                   />
                 );
               }
@@ -758,6 +765,7 @@ export default function AudioStudio({
                     onChange={(urls) => setParams(prev => ({ ...prev, [key]: urls }))}
                     apiKey={apiKey}
                     maxItems={schema.maxItems || 2}
+                    t={t}
                   />
                 );
               }
@@ -854,13 +862,13 @@ export default function AudioStudio({
                 return (
                   <div key={key} className="space-y-2">
                     <label className="block text-xs font-bold text-zinc-200 uppercase tracking-wider">
-                      {schema.title || "Lyrics / Prompt"}
+                      {schema.title || t('sidebar.lyricsPrompt')}
                     </label>
                     <textarea
                       value={params[key] || ""}
                       onChange={(e) => setParams(prev => ({ ...prev, [key]: e.target.value }))}
                       className="w-full bg-zinc-900 border border-zinc-700 focus:border-primary/85 rounded p-3 text-xs text-white placeholder:text-zinc-400 focus:outline-none transition-all min-h-[100px] resize-none leading-relaxed shadow-inner"
-                      placeholder={schema.description || "Enter what you want generated..."}
+                      placeholder={schema.description || t('sidebar.promptPlaceholder')}
                     />
                     {schema.examples && Array.isArray(schema.examples) && (
                       <div className="flex flex-wrap gap-1.5 mt-2">
@@ -889,7 +897,7 @@ export default function AudioStudio({
                   <input
                     type={isNumber ? "number" : "text"}
                     value={params[key] !== undefined ? params[key] : ""}
-                    placeholder={schema.placeholder || schema.description || `Enter ${key}...`}
+                    placeholder={schema.placeholder || schema.description || t('placeholder.enterField')(key)}
                     onChange={(e) => {
                       const val = isNumber ? (e.target.value === "" ? "" : parseFloat(e.target.value)) : e.target.value;
                       setParams(prev => ({ ...prev, [key]: val }));
@@ -909,24 +917,24 @@ export default function AudioStudio({
         </div>
 
         {/* Dynamic Cost & Generate Section */}
-        <div className="p-4 border-t border-zinc-900 bg-zinc-950/80 backdrop-blur-xl absolute bottom-0 left-0 w-full lg:w-[400px] z-40">
+        <div className="p-4 border-t border-white/[0.05] bg-[#0a0a0a]/85 backdrop-blur-xl absolute bottom-0 left-0 w-full lg:w-[400px] z-40">
           <button
             type="button"
             onClick={handleGenerate}
             disabled={isGenerating || !selectedModel}
-            className="w-full py-4 bg-primary text-black text-base font-bold rounded hover:bg-white transition-all transform hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:grayscale shadow-glow flex items-center justify-center gap-3"
+            className="w-full py-4 bg-[#22d3ee] text-black text-base font-bold rounded-xl hover:bg-[#e5ff33] transition-all transform hover:scale-[1.01] active:scale-95 disabled:opacity-50 disabled:grayscale shadow-lg shadow-[#22d3ee]/20 flex items-center justify-center gap-3"
           >
             {isGenerating ? (
               <>
                 <div className="w-4 h-4 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                <span>Generating Audio...</span>
+                <span>{t('generate.generatingAudio')}</span>
               </>
             ) : (
               <>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                   <path d="M5 3l14 9-14 9V3z" />
                 </svg>
-                <span>Generate Track</span>
+                <span>{t('generate.generateTrack')}</span>
               </>
             )}
           </button>
@@ -952,7 +960,7 @@ export default function AudioStudio({
                 </div>
                 <div className="text-center">
                   <span className="text-xs font-black text-red-500 uppercase tracking-widest block mb-1">
-                    Generation Error
+                    {t('error.generationError')}
                   </span>
                   <p className="text-white font-medium text-sm leading-relaxed">
                     {generateError}
@@ -963,19 +971,33 @@ export default function AudioStudio({
 
             {/* 2. Generating / Loading View */}
             {isGenerating && !generateError && (
-              <div className="flex flex-col items-center gap-6 animate-fade-in">
-                <div className="relative">
-                  <div className="w-24 h-24 border-[3px] border-zinc-800 border-t-primary rounded-full animate-spin shadow-glow" />
-                  <div className="absolute inset-0 flex items-center justify-center text-primary">
-                    <MusicIcon className="animate-pulse text-primary" />
+              <div className="flex flex-col items-center gap-8 animate-fade-in relative">
+                {/* Ambient glow */}
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="w-[420px] h-[420px] bg-[#22d3ee]/15 blur-[140px] rounded-full animate-pulse" />
+                </div>
+                <div className="relative z-10">
+                  <div className="w-24 h-24 border-[3px] border-white/10 border-t-[#22d3ee] rounded-full animate-spin shadow-glow" />
+                  <div className="absolute inset-0 flex items-center justify-center text-[#22d3ee]">
+                    <MusicIcon className="animate-pulse text-[#22d3ee]" />
                   </div>
                 </div>
-                <div className="text-center space-y-2">
-                  <div className="text-xs font-black text-primary uppercase tracking-[0.3em] animate-pulse">
-                    Generating Soundtrack
+                {/* Animated equalizer bars */}
+                <div className="relative z-10 flex items-end gap-1.5 h-8">
+                  {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                    <div
+                      key={i}
+                      className="w-1.5 rounded-full bg-gradient-to-t from-[#22d3ee] to-[#a855f7] animate-pulse"
+                      style={{ height: `${12 + (i % 3) * 10}px`, animationDelay: `${i * 90}ms` }}
+                    />
+                  ))}
+                </div>
+                <div className="relative z-10 text-center space-y-2">
+                  <div className="text-xs font-black text-[#22d3ee] uppercase tracking-[0.3em]">
+                    {t('loading.generatingSoundtrack')}
                   </div>
-                  <div className="text-sm text-zinc-200 font-bold">
-                    Rendering audio waveforms and vocals...
+                  <div className="text-sm text-white/50 font-medium">
+                    {t('loading.renderingWaveforms')}
                   </div>
                 </div>
               </div>
@@ -983,17 +1005,47 @@ export default function AudioStudio({
 
             {/* 3. Empty State (no audio, not loading, no error) */}
             {view === "input" && !isGenerating && !generateError && (
-              <div className="flex flex-col items-center gap-6 max-w-md text-center p-8 bg-zinc-900/40 border border-zinc-800 rounded backdrop-blur-sm relative group animate-fade-in-up">
-                {/* Glow behind the icon */}
-                <div className="absolute inset-0 bg-primary/5 blur-3xl rounded-full opacity-25 group-hover:opacity-40 transition-opacity duration-1000 pointer-events-none" />
-                <div className="w-20 h-20 bg-zinc-900 border border-zinc-705 rounded flex items-center justify-center shadow-inner relative z-10 transition-transform duration-500 group-hover:scale-105">
-                  <MusicIcon className="text-primary w-8 h-8 filter drop-shadow-[0_0_8px_rgba(34,211,238,0.3)]" />
+              <div className="flex flex-col items-center justify-center w-full animate-fade-in-up transition-all duration-700 relative">
+                {/* Ambient glow */}
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="w-[520px] h-[520px] bg-[#22d3ee]/10 blur-[160px] rounded-full opacity-70" />
                 </div>
-                <div className="relative z-10">
-                  <h3 className="text-white font-black text-xl mb-3 tracking-tight">Audio Studio</h3>
-                  <p className="text-sm text-zinc-200 font-medium leading-relaxed px-4">
-                    Choose an AI music model, voice cloner, or sound generator. Modify variables on the left and craft your next high-fidelity track.
-                  </p>
+
+                {/* Eyebrow badge */}
+                <div className="relative z-10 mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#22d3ee] animate-pulse" />
+                  <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-white/60">
+                    {t('empty.badge')}
+                  </span>
+                </div>
+
+                {/* Big cinematic headline */}
+                <h1 className="relative z-10 text-4xl sm:text-6xl md:text-7xl font-black text-center leading-[0.92] tracking-tighter mb-6 px-4">
+                  <span className="block text-white">{t('empty.headline1')}</span>
+                  <span className="block bg-gradient-to-r from-[#22d3ee] via-[#38bdf8] to-[#a855f7] bg-clip-text text-transparent">
+                    {t('empty.headline2')}
+                  </span>
+                </h1>
+
+                <p className="relative z-10 text-white/50 text-base md:text-lg font-medium text-center max-w-xl leading-relaxed mb-10 px-4">
+                  {t('empty.description')}
+                </p>
+
+                {/* Genre quick-start chips */}
+                <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 max-w-2xl px-4">
+                  {[t('chip.lofi'), t('chip.epic'), t('chip.synthPop'), t('chip.ambient')].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => {
+                        const styleKey = selectedModel?.inputs?.style ? "style" : (selectedModel?.inputs?.prompt ? "prompt" : null);
+                        if (styleKey) setParams((prev) => ({ ...prev, [styleKey]: chip }));
+                      }}
+                      className="px-4 py-2 rounded-full text-sm font-medium text-white/70 bg-white/[0.04] border border-white/10 hover:border-[#22d3ee]/50 hover:text-white hover:bg-[#22d3ee]/10 transition-all duration-300"
+                    >
+                      {chip}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -1011,13 +1063,13 @@ export default function AudioStudio({
                       <line x1="19" y1="12" x2="5" y2="12" />
                       <polyline points="12 19 5 12 12 5" />
                     </svg>
-                    <span>New Generation</span>
+                    <span>{t('result.newGeneration')}</span>
                   </button>
                   <span className="text-[11px] font-bold text-green-400 px-3.5 py-1.5 bg-green-500/10 border border-green-500/20 rounded-full flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" /> Success
+                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" /> {t('result.success')}
                   </span>
                 </div>
-                <PremiumAudioPlayer url={activeResultUrl} title={activeResultTitle} />
+                <PremiumAudioPlayer url={activeResultUrl} title={activeResultTitle} t={t} />
               </div>
             )}
 
@@ -1027,7 +1079,7 @@ export default function AudioStudio({
           {history.length > 0 && (
             <div className="border-t border-zinc-900 pt-6 w-full animate-fade-in-up">
               <h4 className="text-xs font-bold text-zinc-300 uppercase tracking-wider mb-4 px-1">
-                Generation History ({history.length})
+                {t('history.generationHistory')(history.length)}
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {history.map((entry, idx) => (
@@ -1049,11 +1101,11 @@ export default function AudioStudio({
                         </svg>
                       </div>
                       <span className="text-[10px] font-bold text-primary uppercase tracking-wider truncate">
-                        {entry.model ? entry.model.split('-').slice(0, 2).join(' ') : 'Audio'}
+                        {entry.model ? entry.model.split('-').slice(0, 2).join(' ') : t('history.audioFallback')}
                       </span>
                     </div>
                     <p className="text-[11px] font-semibold text-white line-clamp-2 leading-tight">
-                      {entry.title || entry.prompt || "Untitled Audio"}
+                      {entry.title || entry.prompt || t('history.untitledAudio')}
                     </p>
                   </div>
                 ))}

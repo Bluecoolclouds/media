@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { uploadFile, generateMarketingStudioAd } from "../muapi.js";
+import { useLang, makeT } from "../i18n/useLang";
+import { marketingStudioDict } from "../i18n/dictionaries/marketingStudio";
 
 const SCROLLBAR_STYLE = `
   .custom-scrollbar-thin::-webkit-scrollbar {
@@ -78,12 +80,12 @@ const ASSETS = {
     { id: "b6971dd4-55fa-4e64-b318-392b16504284", name: "Jin", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/Jin.webp" }
   ],
   ugc: [
-    { id: 1, name: "UGC", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/ugc.mp4" },
-    { id: 2, name: "Tutorial", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/ugc_how_to.mp4" },
-    { id: 3, name: "Unboxing", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/ugc_unboxing.mp4" },
-    { id: 4, name: "Hyper Motion", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/hyper-motion-mini.mp4" },
-    { id: 5, name: "Product Review", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/product_review.mp4" },
-    { id: 6, name: "TV Spot", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/tv-spot-mini.mp4" }
+    { id: 1, name: "UGC", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/ugc.mp4", descKey: "format.desc.1" },
+    { id: 2, name: "Tutorial", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/ugc_how_to.mp4", descKey: "format.desc.2" },
+    { id: 3, name: "Unboxing", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/ugc_unboxing.mp4", descKey: "format.desc.3" },
+    { id: 4, name: "Hyper Motion", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/hyper-motion-mini.mp4", descKey: "format.desc.4" },
+    { id: 5, name: "Product Review", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/product_review.mp4", descKey: "format.desc.5" },
+    { id: 6, name: "TV Spot", url: "https://d3adwkbyhxyrtq.cloudfront.net/web-app/tv-spot-mini.mp4", descKey: "format.desc.6" }
   ]
 };
 
@@ -95,14 +97,14 @@ const OPTIONS = {
 
 // ── Components ───────────────────────────────────────────────────────────────
 
-function UploadSlot({ icon, url, progress, label, onUpload, onClear, multiple = false, images = [] }) {
+function UploadSlot({ icon, url, progress, label, onUpload, onClear, multiple = false, images = [], t }) {
   const inputRef = useRef(null);
   
   return (
     <div className="relative group/slot flex items-center">
       <div 
         onClick={() => inputRef.current?.click()}
-        title={`Upload ${label}`}
+        title={t('upload.title')(label)}
         className={`relative w-10 h-10 rounded-full border transition-all flex items-center justify-center cursor-pointer ${
           url ? 'border-primary/40 bg-primary/5' : 'border-white/5 bg-white/5 hover:bg-white/10 hover:border-white/20'
         }`}
@@ -193,6 +195,47 @@ function Dropdown({ isOpen, title, items, selectedId, onSelect, onClose, isVideo
   );
 }
 
+function FormatCard({ item, t, onTry }) {
+  return (
+    <div className="group relative flex flex-col gap-2 rounded-3xl border border-white/5 bg-white/[0.02] p-2 transition-colors hover:border-white/10">
+      <div className="grid h-40 grid-cols-3 gap-1.5 overflow-hidden rounded-2xl md:h-44">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className={`relative overflow-hidden bg-black/40 ${i === 0 ? 'rounded-l-2xl' : ''} ${i === 2 ? 'rounded-r-2xl' : ''}`}
+          >
+            <video
+              src={item.url}
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              onMouseOver={(e) => e.currentTarget.play()}
+              onMouseOut={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-3 px-1 py-1">
+        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-black/40">
+          <video src={item.url} muted loop autoPlay playsInline className="h-full w-full object-cover" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm font-bold text-white">{item.name}</h3>
+          <p className="truncate text-xs text-white/40">{t(item.descKey)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onTry}
+          className="shrink-0 rounded-lg bg-[#34d399] px-3 py-1.5 text-xs font-bold text-black transition-colors hover:bg-[#6ee7b7]"
+        >
+          {t('action.try')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function SimpleDropdown({ isOpen, title, options, selected, onSelect, onClose }) {
   const ref = useRef(null);
   
@@ -233,6 +276,9 @@ function SimpleDropdown({ isOpen, title, options, selected, onSelect, onClose })
 
 export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }) {
   const PERSIST_KEY = "hg_marketing_studio_persistent";
+
+  const lang = useLang();
+  const t = makeT(marketingStudioDict, lang);
   
   const [prompt, setPrompt] = useState("");
   const [productImage, setProductImage] = useState(null);
@@ -324,8 +370,8 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
   };
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return alert("Please enter an ad script.");
-    if (!productImage) return alert("Please upload a product image.");
+    if (!prompt.trim()) return alert(t('alert.enterScript'));
+    if (!productImage) return alert(t('alert.uploadProduct'));
 
     setIsGenerating(true);
     try {
@@ -350,7 +396,7 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
         setFullscreenUrl(result.url);
       }
     } catch (err) {
-      alert("Generation failed: " + err.message);
+      alert(t('alert.generationFailed')(err.message));
     } finally {
       setIsGenerating(false);
     }
@@ -369,8 +415,34 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
       <style>{SCROLLBAR_STYLE}</style>
       
       {/* ── MAIN CONTENT AREA ── */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-40">
-        {history.length > 0 ? (
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pb-40 w-full max-w-7xl mx-auto">
+        {isGenerating && history.length === 0 ? (
+          /* ── Loading view (first ad) ── */
+          <div className="flex flex-col items-center justify-center h-full min-h-[55vh] animate-fade-in transition-all duration-700 relative">
+            {/* Ambient glow */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[420px] h-[420px] bg-[#34d399]/15 blur-[140px] rounded-full animate-pulse" />
+            </div>
+            <div className="relative z-10 w-24 h-24 mb-8">
+              <div className="w-24 h-24 border-[3px] border-white/10 border-t-[#34d399] rounded-full animate-spin shadow-glow" />
+              <div className="absolute inset-0 flex items-center justify-center text-[#34d399]">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-pulse">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+              </div>
+            </div>
+            <div className="relative z-10 text-center space-y-2">
+              <div className="text-xs font-black text-[#34d399] uppercase tracking-[0.3em]">
+                {t('loading.title')}
+              </div>
+              <div className="text-sm text-white/50 font-medium">
+                {t('loading.subtitle')}
+              </div>
+            </div>
+          </div>
+        ) : history.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
             {history.map(entry => (
               <div key={entry.id} className="relative group rounded-lg overflow-hidden border border-white/10 bg-[#0a0a0a] shadow-xl hover:border-primary/50 transition-all duration-300 flex flex-col">
@@ -386,7 +458,7 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
                    <button
                     onClick={(e) => { e.stopPropagation(); downloadFile(entry.url, `marketing-ad-${entry.id}.mp4`); }}
                     className="p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-primary hover:text-black transition-all border border-white/10"
-                    title="Download"
+                    title={t('action.download')}
                    >
                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
@@ -407,34 +479,57 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
             ))}
           </div>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center animate-fade-in-up transition-all duration-700">
-             <div className="mb-12 relative group">
-                <div className="absolute inset-0 bg-primary/10 blur-[120px] rounded-full opacity-30 group-hover:opacity-60 transition-opacity duration-1000" />
-                <div className="relative w-24 h-24 md:w-32 md:h-32 bg-white/[0.02] rounded-[2rem] flex items-center justify-center border border-white/[0.05] overflow-hidden backdrop-blur-sm">
-                  <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10 relative z-10 transition-transform duration-500 group-hover:scale-110 shadow-inner">
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" strokeWidth="1.5">
-                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                      <line x1="8" y1="21" x2="16" y2="21" />
-                      <line x1="12" y1="17" x2="12" y2="21" />
-                    </svg>
-                  </div>
-                </div>
+          <div className="flex flex-col items-center animate-fade-in-up transition-all duration-700 relative">
+            {/* Hero */}
+            <div className="w-full flex flex-col items-center justify-center min-h-[50vh] relative">
+              {/* Ambient glow */}
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="w-[560px] h-[560px] bg-[#34d399]/10 blur-[160px] rounded-full opacity-70" />
               </div>
-              <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight mb-4 text-center px-4">
-                <span className="text-white/40 font-medium uppercase tracking-widest">START CREATING WITH</span>
-                <br />
-                <span className="text-white uppercase tracking-tight">MARKETING STUDIO</span>
-              </h1>
-              <p className="text-white/40 text-sm md:text-base font-medium tracking-wide text-center max-w-lg leading-relaxed px-6">
-                Describe your scene, upload your product, and watch high-converting AI video ads come to life.
+
+              {/* Eyebrow */}
+              <p className="relative z-10 mb-2 text-[13px] font-black uppercase tracking-[0.25em] text-white/50">
+                {t('badge.marketingStudio')}
               </p>
+
+              {/* Big cinematic headline */}
+              <h1 className="relative z-10 text-4xl sm:text-6xl md:text-7xl font-black text-center leading-[0.92] tracking-tighter mb-6 px-4 break-words">
+                <span className="block text-white">{t('hero.titleLine1')}</span>
+                <span className="block bg-gradient-to-r from-[#6ee7b7] via-[#34d399] to-[#22d3ee] bg-clip-text text-transparent">
+                  {t('hero.titleLine2')}
+                </span>
+              </h1>
+
+              <p className="relative z-10 text-white/50 text-base md:text-lg font-medium text-center max-w-xl leading-relaxed px-4">
+                {t('hero.subtitle')}
+              </p>
+            </div>
+
+            {/* Explore formats */}
+            <div className="relative z-10 w-full max-w-6xl px-4 mt-10">
+              <h2 className="mb-5 text-lg font-bold text-white/80">{t('section.exploreFormats')}</h2>
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
+                {ASSETS.ugc.map((item) => (
+                  <FormatCard
+                    key={item.id}
+                    item={item}
+                    t={t}
+                    onTry={() => {
+                      setParams((p) => ({ ...p, format: item.name, videoUrl: item.url }));
+                      textareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      textareaRef.current?.focus();
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
 
       {/* ── BOTTOM PROMPT BAR ── */}
       <div style={{ animationDelay: "0.2s" }} className="absolute bottom-4 w-full max-w-[95%] lg:max-w-4xl z-40 animate-fade-in-up">
-        <div className="bg-[#0a0a0a]/80 backdrop-blur-3xl rounded-lg border border-white/10 p-4 flex flex-col gap-2 shadow-4xl">
+        <div className="bg-[#1c1e21]/90 backdrop-blur-2xl rounded-[20px] border border-white/5 ring-1 ring-[#34d399]/10 p-4 flex flex-col gap-2 shadow-[0px_38px_38px_0px_rgba(15,17,19,0.17),0px_10px_21px_0px_rgba(15,17,19,0.2)]">
           {additionalImages.length > 0 && (
             <div className="flex items-center gap-1.5">
               {additionalImages.map((img, idx) => (
@@ -457,7 +552,7 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onInput={handleTextareaInput}
-              placeholder="Describe your ad script... Use @image1 for product, @image2 for avatar."
+              placeholder={t('placeholder.prompt')}
               rows={1}
               className="w-full bg-transparent border-none text-white text-sm placeholder:text-white/20 focus:outline-none resize-none pt-1 leading-relaxed min-h-[44px] max-h-[300px] custom-scrollbar font-medium"
             />
@@ -470,36 +565,39 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
               {/* Asset Uploads Group */}
               <div className="flex items-center gap-1.5 pr-3 border-r border-white/10">
                 <UploadSlot 
-                  label="Product" 
+                  label={t('label.product')} 
                   icon={<ProductIcon />} 
                   url={productImage} 
                   progress={uploadProgress.product} 
-                  onUpload={(e) => handleUpload(e, 'product')} 
-                  onClear={() => setProductImage(null)} 
+                  onUpload={(e) => handleUpload(e, 'product')}
+                  onClear={() => setProductImage(null)}
+                  t={t}
                 />
-                <UploadSlot 
-                  label="Avatar" 
-                  icon={<AvatarIcon />} 
-                  url={avatarImage} 
-                  progress={uploadProgress.avatar} 
-                  onUpload={(e) => handleUpload(e, 'avatar')} 
-                  onClear={() => setAvatarImage(null)} 
+                <UploadSlot
+                  label={t('label.avatar')}
+                  icon={<AvatarIcon />}
+                  url={avatarImage}
+                  progress={uploadProgress.avatar}
+                  onUpload={(e) => handleUpload(e, 'avatar')}
+                  onClear={() => setAvatarImage(null)}
+                  t={t}
                 />
-                <UploadSlot 
-                  label="References" 
-                  icon={<RefIcon />} 
+                <UploadSlot
+                  label={t('label.references')}
+                  icon={<RefIcon />}
                   url={additionalImages[0]} 
                   progress={uploadProgress.additional} 
                   multiple 
                   images={additionalImages}
-                  onUpload={(e) => handleUpload(e, 'additional')} 
+                  onUpload={(e) => handleUpload(e, 'additional')}
                   onClear={(idx) => {
                     if (idx !== undefined) {
                       setAdditionalImages(prev => prev.filter((_, i) => i !== idx));
                     } else {
                       setAdditionalImages([]);
                     }
-                  }} 
+                  }}
+                  t={t}
                 />
               </div>
 
@@ -517,7 +615,7 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
                 </button>
                 <Dropdown 
                   isOpen={dropdown === 'format'} 
-                  title="Video Format Presets"
+                  title={t('dropdown.videoFormatPresets')}
                   items={ASSETS.ugc} 
                   selectedId={params.format}
                   onSelect={(item) => setParams({ ...params, format: item.name, videoUrl: item.url })}
@@ -536,13 +634,13 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
                     <img src={avatarImage || ASSETS.avatar[0].url} className="w-full h-full object-cover" />
                   </div>
                   <span className="text-sm font-bold text-white/70 group-hover:text-primary transition-colors">
-                    {ASSETS.avatar.find(a => a.url === avatarImage)?.name || "Select Avatar"}
+                    {ASSETS.avatar.find(a => a.url === avatarImage)?.name || t('avatar.select')}
                   </span>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" className="opacity-20 group-hover:opacity-100 transition-opacity"><path d="M6 9l6 6 6-6" /></svg>
                 </button>
                 <Dropdown 
                   isOpen={dropdown === 'avatar'} 
-                  title="Avatar Presets"
+                  title={t('dropdown.avatarPresets')}
                   items={ASSETS.avatar} 
                   selectedId={avatarImage}
                   onSelect={(item) => setAvatarImage(item.url)}
@@ -561,7 +659,7 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
                   </button>
                   <SimpleDropdown 
                     isOpen={dropdown === key} 
-                    title={key === 'res' ? 'Resolution' : key.toUpperCase()} 
+                    title={key === 'res' ? t('label.resolution') : key === 'ratio' ? t('label.ratio') : t('label.duration')}
                     options={OPTIONS[key]} 
                     selected={params[key]} 
                     onSelect={(val) => setParams({ ...params, [key]: val })} 
@@ -574,15 +672,15 @@ export default function MarketingStudio({ apiKey, droppedFiles, onFilesHandled }
             <button
               onClick={handleGenerate}
               disabled={isGenerating}
-              className="bg-primary text-black px-8 py-2.5 rounded font-bold text-base hover:bg-[#e5ff33] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-glow disabled:opacity-50 disabled:grayscale z-10"
+              className="bg-[#34d399] text-black px-8 py-2.5 rounded-lg font-bold text-base hover:bg-[#6ee7b7] hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-lg shadow-[#34d399]/20 disabled:opacity-50 disabled:grayscale z-10"
             >
               {isGenerating ? (
                 <>
                   <div className="w-3 h-3 border-2 border-black/20 border-t-black rounded-full animate-spin" />
-                  Generating...
+                  {t('action.generating')}
                 </>
               ) : (
-                <span>Launch</span>
+                <span>{t('action.launch')}</span>
               )}
             </button>
           </div>

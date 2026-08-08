@@ -2,6 +2,7 @@
 
 export { default as ImageStudio } from './components/ImageStudio';
 export { default as VideoStudio } from './components/VideoStudio';
+export { default as AvatarStudio } from './components/AvatarStudio';
 export { default as ClippingStudio } from './components/ClippingStudio';
 export { default as VibeMotionStudio } from './components/VibeMotionStudio';
 export { default as LipSyncStudio } from './components/LipSyncStudio';
@@ -9,9 +10,15 @@ export { default as RecastStudio } from './components/RecastStudio';
 export { default as CinemaStudio } from './components/CinemaStudio';
 export { default as AudioStudio } from './components/AudioStudio';
 export { default as MarketingStudio } from './components/MarketingStudio';
+export { default as ProductCardStudio } from './components/ProductCardStudio';
 export { default as WorkflowStudio } from './components/WorkflowStudio';
 export { default as AgentStudio } from './components/AgentStudio';
 export { default as DesignAgentStudio } from './components/DesignAgentStudio';
-export { default as AppsStudio } from './components/AppsStudio';
 export { default as McpCliStudio } from './components/McpCliStudio';
 export * from './muapi';
+export * from './i18n/core';
+export * from './i18n/useLang';
+export { shellDict } from './i18n/dictionaries/shell';
+export { pricingContent } from './i18n/dictionaries/pricing';
+export { agentStudioDict } from './i18n/dictionaries/agentStudio';
+export { mcpCliStudioDict } from './i18n/dictionaries/mcpCliStudio';

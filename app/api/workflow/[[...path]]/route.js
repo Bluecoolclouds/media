@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const MUAPI_BASE = 'https://api.muapi.ai';
+const MUAPI_BASE = process.env.API_BASE || 'https://api.muapi.ai';
 
 function getApiKey(request) {
     // Priority 1: Direct x-api-key header

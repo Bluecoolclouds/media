@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { generateVideo, generateI2V, processV2V, uploadFile } from "../muapi.js";
+import { useLang, makeT } from "../i18n/useLang";
+import { videoStudioDict } from "../i18n/dictionaries/videoStudio";
 import {
   t2vModels,
   i2vModels,
@@ -104,7 +106,7 @@ function DropdownItem({ label, selected, onClick }) {
   );
 }
 
-function ModelDropdown({ imageMode, selectedModel, onSelect, onClose }) {
+function ModelDropdown({ imageMode, selectedModel, onSelect, onClose, t }) {
   const [search, setSearch] = useState("");
 
   const generationModels = imageMode ? i2vModels : t2vModels;
@@ -147,7 +149,7 @@ function ModelDropdown({ imageMode, selectedModel, onSelect, onClose }) {
           </span>
           {isV2V && (
             <span className="text-[9px] text-orange-400/70">
-              {m.imageField ? "Upload a video and image" : "Upload a video to use"}
+              {m.imageField ? t('modelDropdown.uploadVideoAndImage') : t('modelDropdown.uploadVideoToUse')}
             </span>
           )}
         </div>
@@ -174,7 +176,7 @@ function ModelDropdown({ imageMode, selectedModel, onSelect, onClose }) {
           </svg>
           <input
             type="text"
-            placeholder="Search models..."
+            placeholder={t('modelDropdown.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onClick={(e) => e.stopPropagation()}
@@ -183,14 +185,14 @@ function ModelDropdown({ imageMode, selectedModel, onSelect, onClose }) {
         </div>
       </div>
       <div className="text-xs font-bold text-secondary px-3 py-2 shrink-0">
-        Video models
+        {t('modelDropdown.videoModels')}
       </div>
       <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pr-1 pb-2">
         {filteredMain.map((m) => renderItem(m, false))}
         {filteredV2V.length > 0 && (
           <>
             <div className="text-xs font-bold text-orange-400/70 px-3 py-2 mt-1 border-t border-white/5">
-              Video Tools
+              {t('modelDropdown.videoTools')}
             </div>
             {filteredV2V.map((m) => renderItem(m, true))}
           </>
@@ -241,6 +243,9 @@ export default function VideoStudio({
   droppedFiles,
   onFilesHandled,
 }) {
+  const lang = useLang();
+  const t = makeT(videoStudioDict, lang);
+
   const PERSIST_KEY = "hg_video_studio_persistent";
 
   // ── mode state ──
@@ -545,7 +550,7 @@ export default function VideoStudio({
 
   const processDroppedImage = async (file) => {
     if (file.size > 10 * 1024 * 1024) {
-      alert("Image exceeds 10MB limit.");
+      alert(t('alert.imageExceeds10mb'));
       return;
     }
     setImageUploading(true);
@@ -584,7 +589,7 @@ export default function VideoStudio({
       }
       setPromptDisabled(false);
     } catch (err) {
-      alert(`Image upload failed: ${err.message}`);
+      alert(t('alert.imageUploadFailed')(err.message));
     } finally {
       setImageUploading(false);
       setImageProgress(0);
@@ -593,7 +598,7 @@ export default function VideoStudio({
 
   const processDroppedVideo = async (file) => {
     if (file.size > 50 * 1024 * 1024) {
-      alert("Video exceeds 50MB limit.");
+      alert(t('alert.videoExceeds50mb'));
       return;
     }
     setVideoUploading(true);
@@ -616,7 +621,7 @@ export default function VideoStudio({
       setPrompt("");
       setPromptDisabled(true);
     } catch (err) {
-      alert(`Video upload failed: ${err.message}`);
+      alert(t('alert.videoUploadFailed')(err.message));
     } finally {
       setVideoUploading(false);
       setVideoProgress(0);
@@ -671,7 +676,7 @@ export default function VideoStudio({
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      alert("Image exceeds 10MB limit.");
+      alert(t('alert.imageExceeds10mb'));
       return;
     }
     setImageUploading(true);
@@ -720,7 +725,7 @@ export default function VideoStudio({
       }
     } catch (err) {
       console.error("[VideoStudio] Image upload failed:", err);
-      alert(`Image upload failed: ${err.message}`);
+      alert(t('alert.imageUploadFailed')(err.message));
     } finally {
       setImageUploading(false);
       setImageProgress(0);
@@ -765,7 +770,7 @@ export default function VideoStudio({
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) {
-      alert("Image exceeds 10MB limit.");
+      alert(t('alert.imageExceeds10mb'));
       return;
     }
     setEndImageUploading(true);
@@ -776,7 +781,7 @@ export default function VideoStudio({
       });
       setUploadedEndImageUrl(url);
     } catch (err) {
-      alert(`End frame upload failed: ${err.message}`);
+      alert(t('alert.endFrameUploadFailed')(err.message));
     } finally {
       setEndImageUploading(false);
       setEndImageProgress(0);
@@ -791,7 +796,7 @@ export default function VideoStudio({
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 50 * 1024 * 1024) {
-      alert("Video exceeds 50MB limit.");
+      alert(t('alert.videoExceeds50mb'));
       return;
     }
     setVideoUploading(true);
@@ -822,7 +827,7 @@ export default function VideoStudio({
       }
     } catch (err) {
       console.error("[VideoStudio] Video upload failed:", err);
-      alert(`Video upload failed: ${err.message}`);
+      alert(t('alert.videoUploadFailed')(err.message));
     } finally {
       setVideoUploading(false);
       setVideoProgress(0);
@@ -898,40 +903,38 @@ export default function VideoStudio({
 
     if (v2vMode) {
       if (!uploadedVideoUrl) {
-        alert("Please upload a video first.");
+        alert(t('alert.uploadVideoFirst'));
         return;
       }
       if (currentModel?.imageField && !uploadedImageUrl) {
-        alert("Please upload a reference image for motion control.");
+        alert(t('alert.uploadReferenceImageForMotionControl'));
         return;
       }
       if (currentModel?.promptRequired && !trimmedPrompt) {
-        alert("Please describe the motion you want.");
+        alert(t('alert.describeMotionYouWant'));
         return;
       }
     } else if (isExtendMode) {
       if (!lastGenerationId) {
-        alert(
-          "No Seedance 2.0 generation found to extend. Generate a video first.",
-        );
+        alert(t('alert.noSeedanceToExtend'));
         return;
       }
     } else if (imageMode) {
       const maxImgs = getMaxImagesForI2VModel(selectedModel);
       if (maxImgs > 2) {
         if (uploadedImageUrls.length === 0) {
-          alert("Please upload at least one reference image first.");
+          alert(t('alert.uploadAtLeastOneReferenceImage'));
           return;
         }
       } else {
         if (!uploadedImageUrl) {
-          alert("Please upload a start frame image first.");
+          alert(t('alert.uploadStartFrameImage'));
           return;
         }
       }
     } else {
       if (!trimmedPrompt) {
-        alert("Please enter a prompt to generate a video.");
+        alert(t('alert.enterPromptToGenerate'));
         return;
       }
     }
@@ -1276,33 +1279,57 @@ export default function VideoStudio({
             })}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full animate-fade-in-up transition-all duration-700 min-h-[50vh]">
-            <div className="mb-12 relative group">
-              <div className="absolute inset-0 bg-primary/10 blur-[120px] rounded-full opacity-30 group-hover:opacity-60 transition-opacity duration-1000" />
-              <div className="relative w-24 h-24 md:w-32 md:h-32 bg-white/[0.02] rounded-[2rem] flex items-center justify-center border border-white/[0.05] overflow-hidden backdrop-blur-sm">
-                <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10 relative z-10 transition-transform duration-500 group-hover:scale-110">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary opacity-80">
-                    <polygon points="23 7 16 12 23 17 23 7" />
-                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                  </svg>
-                </div>
-                <div className="absolute top-4 right-4 text-[10px] text-primary/40 animate-pulse">✨</div>
-              </div>
+          <div className="flex flex-col items-center justify-center h-full animate-fade-in-up transition-all duration-700 min-h-[60vh] relative">
+            {/* Ambient glow */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[560px] h-[560px] bg-[#22d3ee]/10 blur-[160px] rounded-full opacity-70" />
             </div>
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight mb-4 text-center px-4">
-              <span className="text-white/40 font-medium">START CREATING WITH</span><br />
-              <span className="text-white">VIDEO STUDIO</span>
+
+            {/* Eyebrow badge */}
+            <div className="relative z-10 mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22d3ee] animate-pulse" />
+              <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-white/60">
+                Video Studio
+              </span>
+            </div>
+
+            {/* Big cinematic headline */}
+            <h1 className="relative z-10 text-5xl sm:text-7xl md:text-[5.5rem] font-black text-center leading-[0.92] tracking-tighter mb-6 px-4">
+              <span className="block text-white">Bring images</span>
+              <span className="block bg-gradient-to-r from-[#67e8f9] via-[#22d3ee] to-[#0891b2] bg-clip-text text-transparent">
+                to life in motion
+              </span>
             </h1>
-            <p className="text-white/40 text-sm md:text-base font-medium tracking-wide text-center max-w-lg leading-relaxed">
-              Animate images into stunning AI videos with motion effects
+
+            <p className="relative z-10 text-white/50 text-base md:text-lg font-medium text-center max-w-xl leading-relaxed mb-10 px-4">
+              Animate a still or describe a shot — and generate AI video in seconds.
             </p>
+
+            {/* Quick-start prompt chips */}
+            <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 max-w-2xl px-4">
+              {[
+                "Slow cinematic zoom on a face",
+                "Drone flyover of misty mountains",
+                "Neon city timelapse at night",
+                "Gentle waves on a golden beach",
+              ].map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => setPrompt(chip)}
+                  className="px-4 py-2 rounded-full text-sm font-medium text-white/70 bg-white/[0.04] border border-white/10 hover:border-[#22d3ee]/50 hover:text-white hover:bg-[#22d3ee]/10 transition-all duration-300"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
       {/* ── BOTTOM PROMPT BAR ── */}
       <div className="absolute bottom-4 w-full max-w-[95%] lg:max-w-4xl z-40 animate-fade-in-up" style={{ animationDelay: "0.2s" }}>
-        <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-3xl rounded-md border border-white/10 p-4 flex flex-col gap-2 shadow-2xl">
+        <div className="w-full bg-[#0a0a0a]/80 backdrop-blur-3xl rounded-2xl border border-white/10 p-4 flex flex-col gap-2 shadow-2xl ring-1 ring-[#22d3ee]/10">
           <div className="flex items-center gap-2 px-1">
             {/* Image upload button / thumbnails */}
             {imageMode && getMaxImagesForI2VModel(selectedModel) > 2 ? (
@@ -1649,6 +1676,7 @@ export default function VideoStudio({
                       selectedModel={selectedModel}
                       onSelect={handleModelSelect}
                       onClose={() => setOpenDropdown(null)}
+                      t={t}
                     />
                   </div>
                 )}

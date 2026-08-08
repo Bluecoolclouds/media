@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { generateImage, uploadFile } from "../muapi.js";
+import { useLang, makeT } from "../i18n/useLang";
+import { cinemaStudioDict } from "../i18n/dictionaries/cinemaStudio";
 
 // ─── Constants (inlined from promptUtils) ───────────────────────────────────
 
@@ -358,6 +360,7 @@ function CameraControlsOverlay({
   onClose,
   settings,
   onSettingsChange,
+  t,
 }) {
   const backdropRef = useRef(null);
 
@@ -382,7 +385,7 @@ function CameraControlsOverlay({
         <div className="flex items-center justify-between mb-8">
           <div className="flex flex-col gap-1">
             <h2 className="text-2xl font-black text-white tracking-tighter uppercase italic">
-              Camera Config
+              {t('overlay.title')}
             </h2>
             <div className="h-[1px] w-12 bg-primary/40" />
           </div>
@@ -406,28 +409,28 @@ function CameraControlsOverlay({
         {/* Scroll columns */}
         <div className="w-full flex justify-start md:justify-center gap-3 md:gap-6 py-4 md:py-8 overflow-x-auto no-scrollbar snap-x px-4 md:px-0">
           <ScrollColumn
-            title="Camera"
+            title={t('column.camera')}
             items={CAMERAS}
             columnKey="camera"
             value={settings.camera}
             onChange={updateSetting("camera")}
           />
           <ScrollColumn
-            title="Lens"
+            title={t('column.lens')}
             items={LENSES}
             columnKey="lens"
             value={settings.lens}
             onChange={updateSetting("lens")}
           />
           <ScrollColumn
-            title="Focal Length"
+            title={t('column.focalLength')}
             items={FOCAL_LENGTHS}
             columnKey="focal"
             value={settings.focal}
             onChange={updateSetting("focal")}
           />
           <ScrollColumn
-            title="Aperture"
+            title={t('column.aperture')}
             items={APERTURES}
             columnKey="aperture"
             value={settings.aperture}
@@ -446,6 +449,9 @@ export default function CinemaStudio({
   onGenerationComplete,
   historyItems,
 }) {
+  const lang = useLang();
+  const t = makeT(cinemaStudioDict, lang);
+
   const PERSIST_KEY = "hg_cinema_studio_persistent";
 
   // ── Settings state ──
@@ -628,11 +634,11 @@ export default function CinemaStudio({
           });
         }
       } else {
-        throw new Error("No data returned");
+        throw new Error(t('error.noDataReturned'));
       }
     } catch (e) {
       console.error(e);
-      alert("Generation Failed: " + e.message);
+      alert(t('alert.generationFailed')(e.message));
     } finally {
       setIsGenerating(false);
     }
@@ -712,7 +718,32 @@ export default function CinemaStudio({
       
       {/* ── CENTRAL GALLERY AREA ── */}
       <div className="flex-1 w-full max-w-7xl mx-auto overflow-y-auto custom-scrollbar pb-40 lg:pb-32 px-2">
-        {history.length > 0 ? (
+        {isGenerating && history.length === 0 ? (
+          /* ── Loading view (first shot) ── */
+          <div className="flex flex-col items-center justify-center h-full min-h-[55vh] animate-fade-in transition-all duration-700 relative">
+            {/* Ambient glow */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[420px] h-[420px] bg-[#22d3ee]/15 blur-[140px] rounded-full animate-pulse" />
+            </div>
+            <div className="relative z-10 w-24 h-24 mb-8">
+              <div className="w-24 h-24 border-[3px] border-white/10 border-t-[#22d3ee] rounded-full animate-spin shadow-glow" />
+              <div className="absolute inset-0 flex items-center justify-center text-[#22d3ee]">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-pulse">
+                  <path d="M23 7l-7 5 7 5V7z" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+                </svg>
+              </div>
+            </div>
+            <div className="relative z-10 text-center space-y-2">
+              <div className="text-xs font-black text-[#22d3ee] uppercase tracking-[0.3em]">
+                {t('loading.rollingCamera')}
+              </div>
+              <div className="text-sm text-white/50 font-medium">
+                {t('loading.composing')}
+              </div>
+            </div>
+          </div>
+        ) : history.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full pt-4 animate-fade-in-up">
             {history.map((entry, idx) => (
               <div
@@ -722,7 +753,7 @@ export default function CinemaStudio({
               >
                 <img
                   src={entry.url}
-                  alt={`History item ${idx + 1}`}
+                  alt={t('gallery.historyItemAlt')(idx + 1)}
                   className="w-full aspect-[4/3] object-cover bg-black/40"
                 />
                 
@@ -730,7 +761,7 @@ export default function CinemaStudio({
                 <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     type="button"
-                    title="Fullscreen"
+                    title={t('action.fullscreen')}
                     onClick={(e) => {
                       e.stopPropagation();
                       setFullscreenUrl(entry.url);
@@ -746,7 +777,7 @@ export default function CinemaStudio({
                   </button>
                   <button
                     type="button"
-                    title="Download"
+                    title={t('action.download')}
                     onClick={async (e) => {
                       e.stopPropagation();
                       try {
@@ -775,11 +806,11 @@ export default function CinemaStudio({
                 {/* Details */}
                 <div className="p-3 bg-black/80 backdrop-blur-sm border-t border-white/5 flex-1 flex flex-col justify-between gap-2">
                   <p className="text-white/70 text-xs line-clamp-3 leading-relaxed">
-                    {entry.settings?.prompt || "No prompt"}
+                    {entry.settings?.prompt || t('gallery.noPrompt')}
                   </p>
                   <div className="flex items-center justify-between mt-1 flex-wrap gap-1">
                     <span className="text-[10px] font-bold text-[#22d3ee] px-2 py-0.5 bg-[#22d3ee]/10 rounded border border-[#22d3ee]/20">
-                      {entry.settings?.camera || "Standard"}
+                      {entry.settings?.camera || t('gallery.standardCamera')}
                     </span>
                     <div className="flex gap-2">
                       <span className="text-[10px] text-white/40">{entry.settings?.lens || "35mm"}</span>
@@ -793,33 +824,64 @@ export default function CinemaStudio({
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-center px-4 animate-fade-in-up transition-all duration-700 min-h-[50vh]">
-            <div className="mb-12 relative group">
-              <div className="absolute inset-0 bg-primary/10 blur-[120px] rounded-full opacity-30 group-hover:opacity-60 transition-opacity duration-1000" />
-              <div className="relative w-24 h-24 md:w-32 md:h-32 bg-white/[0.02] rounded-[2rem] flex items-center justify-center border border-white/[0.05] overflow-hidden backdrop-blur-sm">
-                <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center border border-primary/10 relative z-10 transition-transform duration-500 group-hover:scale-110">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-primary opacity-80">
-                    <path d="M23 7l-7 5 7 5V7z" />
-                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
-                  </svg>
-                </div>
-                <div className="absolute top-4 right-4 text-[10px] text-primary/40 animate-pulse">REC</div>
-              </div>
+          <div className="flex flex-col items-center justify-center h-full text-center px-4 animate-fade-in-up transition-all duration-700 min-h-[60vh] relative">
+            {/* Ambient glow */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[560px] h-[560px] bg-[#22d3ee]/10 blur-[160px] rounded-full opacity-70" />
             </div>
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight mb-4 text-center px-4">
-              <span className="text-white/40 font-medium">START CREATING WITH</span><br />
-              <span className="text-white uppercase tracking-wider">Cinema Studio</span>
+
+            {/* Eyebrow badge */}
+            <div className="relative z-10 mb-8 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22d3ee] animate-pulse" />
+              <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-white/60">
+                {t('badge.cinemaStudio')}
+              </span>
+            </div>
+
+            {/* Big cinematic headline */}
+            <h1 className="relative z-10 text-4xl sm:text-6xl md:text-7xl font-black text-center leading-[0.92] tracking-tighter mb-6 px-4">
+              <span className="block text-white">{t('headline.shootLikeA')}</span>
+              <span className="block bg-gradient-to-r from-[#22d3ee] via-[#38bdf8] to-[#a855f7] bg-clip-text text-transparent">
+                {t('headline.filmDirector')}
+              </span>
             </h1>
-            <p className="text-white/40 text-sm md:text-base font-medium tracking-wide text-center max-w-lg leading-relaxed">
-              What would you shoot with infinite budget?
+
+            <p className="relative z-10 text-white/50 text-base md:text-lg font-medium text-center max-w-xl leading-relaxed mb-10 px-4">
+              {t('subheadline.description')}
             </p>
+
+            {/* Quick-start prompt chips */}
+            <div className="relative z-10 flex flex-wrap items-center justify-center gap-3 max-w-2xl px-4">
+              {[
+                t('chip.roofNight'),
+                t('chip.desertHighway'),
+                t('chip.rainStreet'),
+                t('chip.closeupPortrait'),
+              ].map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => {
+                    setSettings((prev) => ({ ...prev, prompt: chip }));
+                    if (textareaRef.current) {
+                      textareaRef.current.value = chip;
+                      textareaRef.current.style.height = "auto";
+                      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+                    }
+                  }}
+                  className="px-4 py-2 rounded-full text-sm font-medium text-white/70 bg-white/[0.04] border border-white/10 hover:border-[#22d3ee]/50 hover:text-white hover:bg-[#22d3ee]/10 transition-all duration-300"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
 
       {/* ── BOTTOM PROMPT BAR ── */}
       <div className="absolute bottom-4 left-4 right-4 md:left-0 md:right-0 md:mx-auto md:max-w-[95%] lg:max-w-4xl z-30 transition-all duration-700 animate-fade-in-up">
-        <div className="bg-[#0a0a0a]/80 backdrop-blur-3xl border border-white/10 rounded-md p-4 flex justify-between shadow-2xl items-end relative gap-2">
+        <div className="bg-[#0a0a0a]/80 backdrop-blur-3xl border border-white/10 rounded-2xl ring-1 ring-[#22d3ee]/10 p-4 flex justify-between shadow-2xl items-end relative gap-2">
           {/* Left Column */}
           <div className="flex-1 flex flex-col gap-3 min-h-[80px] justify-between py-1">
             {/* Input Row */}
@@ -875,7 +937,7 @@ export default function CinemaStudio({
                     <div className="relative w-full h-full group">
                       <img
                         src={uploadedImage}
-                        alt="Reference"
+                        alt={t('upload.referenceAlt')}
                         className="w-full h-full object-cover opacity-80 group-hover:opacity-40 transition-opacity"
                       />
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -896,7 +958,7 @@ export default function CinemaStudio({
 
               <textarea
                 ref={textareaRef}
-                placeholder="Describe your cinema scene..."
+                placeholder={t('placeholder.describeScene')}
                 className="w-full bg-transparent border-none text-white text-sm placeholder:text-white/10 focus:outline-none resize-none pt-1 leading-relaxed min-h-[40px] max-h-[150px] md:max-h-[250px] overflow-y-auto custom-scrollbar disabled:opacity-40"
                 rows={1}
                 onInput={handleTextareaInput}
@@ -979,11 +1041,11 @@ export default function CinemaStudio({
                 >
                   {isGenerating ? (
                     <>
-                      <span className="animate-spin inline-block text-black">◌</span> SHOOTING...
+                      <span className="animate-spin inline-block text-black">◌</span> {t('generate.shooting')}
                     </>
                   ) : (
                     <>
-                      <span>SHOOT</span>
+                      <span>{t('generate.shoot')}</span>
                     </>
                   )}
                 </button>
@@ -1012,7 +1074,7 @@ export default function CinemaStudio({
           </button>
           <img 
             src={fullscreenUrl} 
-            alt="Fullscreen Preview" 
+            alt={t('modal.fullscreenPreviewAlt')} 
             className="max-w-[95vw] max-h-[95vh] rounded-2xl shadow-2xl object-contain animate-scale-up" 
             onClick={(e) => e.stopPropagation()}
           />
@@ -1024,6 +1086,7 @@ export default function CinemaStudio({
         onClose={() => setIsOverlayOpen(false)}
         settings={settings}
         onSettingsChange={setSettings}
+        t={t}
       />
     </div>
   );

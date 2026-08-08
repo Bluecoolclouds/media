@@ -7,22 +7,24 @@ import {
   getUserAgents,
   getUserConversations,
 } from "../muapi.js";
+import { useLang, makeT } from "../i18n/useLang";
+import { agentStudioDict } from "../i18n/dictionaries/agentStudio";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
-function timeAgo(dateStr) {
+function timeAgo(dateStr, t) {
   if (!dateStr) return "";
   const utcStr =
     dateStr.endsWith("Z") || dateStr.includes("+") ? dateStr : dateStr + "Z";
   const diff = Math.floor((Date.now() - new Date(utcStr)) / 1000);
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  if (diff < 60) return t('time.justNow');
+  if (diff < 3600) return t('time.minutesAgo')(Math.floor(diff / 60));
+  if (diff < 86400) return t('time.hoursAgo')(Math.floor(diff / 3600));
+  if (diff < 604800) return t('time.daysAgo')(Math.floor(diff / 86400));
   return new Date(utcStr).toLocaleDateString();
 }
 
 // ─── Agent Card (grid) ───────────────────────────────────────────────────────
-function AgentCard({ agent, onClick, onEdit }) {
+function AgentCard({ agent, onClick, onEdit, t }) {
   return (
     <div className="group relative aspect-[4/5] rounded-xl cursor-pointer">
       <div
@@ -45,14 +47,14 @@ function AgentCard({ agent, onClick, onEdit }) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-4">
           <div className="text-[10px] font-bold text-[#22d3ee] uppercase tracking-wider mb-1 opacity-80">
-            {agent.category || "AI Assistant"}
+            {agent.category || t('card.defaultCategory')}
           </div>
           <h3 className="text-sm font-bold text-white truncate group-hover:text-[#22d3ee] transition-colors">
-            {agent.name || "Unnamed Agent"}
+            {agent.name || t('card.unnamedAgent')}
           </h3>
           {agent.owner_username && (
             <p className="text-[9px] text-white/40 mt-1 uppercase tracking-tighter font-black">
-              By {agent.owner_username}
+              {t('card.byOwner')(agent.owner_username)}
             </p>
           )}
         </div>
@@ -77,7 +79,7 @@ function AgentCard({ agent, onClick, onEdit }) {
 }
 
 // ─── Conversation Card (My Chats) ────────────────────────────────────────────
-function ConversationCard({ conv, onClick }) {
+function ConversationCard({ conv, onClick, t }) {
   const displayTitle = conv.title || "New Chat";
   const agentSlug = conv.agent_slug || conv.agent_id;
   return (
@@ -99,7 +101,7 @@ function ConversationCard({ conv, onClick }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[10px] font-black text-[#22d3ee] uppercase tracking-wider truncate">
-            {conv.agent_name || "Unknown Agent"}
+            {conv.agent_name || t('card.unknownAgent')}
           </p>
           <p className="text-sm font-bold text-white truncate" title={displayTitle}>
             {displayTitle}
@@ -107,8 +109,8 @@ function ConversationCard({ conv, onClick }) {
         </div>
       </div>
       <div className="flex items-center justify-between pt-2 border-t border-white/5 mt-auto text-[10px] text-white/30 font-medium">
-        <span>{timeAgo(conv.updated_at)}</span>
-        {conv.message_count != null && <span>{conv.message_count} msgs</span>}
+        <span>{timeAgo(conv.updated_at, t)}</span>
+        {conv.message_count != null && <span>{t('card.msgs')(conv.message_count)}</span>}
       </div>
     </div>
   );
@@ -116,9 +118,16 @@ function ConversationCard({ conv, onClick }) {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 const TABS = ["templates", "my-agents", "my-chats"];
+const TAB_KEYS = {
+  "templates": "tab.templates",
+  "my-agents": "tab.myAgents",
+  "my-chats": "tab.myChats",
+};
 
 export default function AgentStudio({ apiKey }) {
   const router = useRouter();
+  const lang = useLang();
+  const t = makeT(agentStudioDict, lang);
 
   const [activeMainTab, setActiveMainTab] = useState("templates");
   const [agents, setAgents] = useState([]);
@@ -193,7 +202,7 @@ export default function AgentStudio({ apiKey }) {
       <div className="flex-shrink-0 h-16 border-b border-white/5 flex items-center justify-between px-8 bg-black/40">
         <div className="flex items-center gap-8 h-full">
           <h2 className="text-sm font-black uppercase tracking-[0.2em] text-[#22d3ee]">
-            Agents
+            {t('header.title')}
           </h2>
           <div className="flex gap-1 bg-white/5 p-1 rounded-xl">
             {TABS.map((tab) => (
@@ -206,7 +215,7 @@ export default function AgentStudio({ apiKey }) {
                     : "text-white/40 hover:text-white hover:bg-white/5"
                 }`}
               >
-                {tab.replace(/-/g, " ")}
+                {t(TAB_KEYS[tab])}
               </button>
             ))}
           </div>
@@ -217,7 +226,7 @@ export default function AgentStudio({ apiKey }) {
           className="px-6 py-2 bg-[#22d3ee] text-black text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-[#ebff66] transition-all active:scale-95 flex items-center gap-2"
         >
           <span className="text-sm">+</span>
-          Create
+          {t('create').replace(/^\+\s*/, '')}
         </button>
       </div>
 
@@ -239,22 +248,32 @@ export default function AgentStudio({ apiKey }) {
               onClick={() => setActiveMainTab(activeMainTab)} // retrigger effect
               className="text-[10px] text-white/40 hover:text-white border border-white/10 px-4 py-2 rounded-lg transition-colors"
             >
-              Retry
+              {t('retry')}
             </button>
           </div>
         ) : activeMainTab === "my-chats" ? (
           // ── My Chats view ─────────────────────────────────────────────────
           conversations.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-white/10 gap-4">
-              <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.5">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em]">No chats yet</p>
+            <div className="h-full flex flex-col items-center justify-center animate-fade-in-up transition-all duration-700 min-h-[50vh] relative">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="w-[460px] h-[460px] bg-[#22d3ee]/10 blur-[150px] rounded-full opacity-70" />
+              </div>
+              <div className="relative z-10 mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22d3ee] animate-pulse" />
+                <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-white/60">{t('empty.myChatsBadge')}</span>
+              </div>
+              <h2 className="relative z-10 text-3xl sm:text-4xl md:text-5xl font-black text-center leading-[0.95] tracking-tighter mb-4 px-4">
+                <span className="block text-white">{t('empty.noConversations')}</span>
+                <span className="block bg-gradient-to-r from-[#22d3ee] via-[#38bdf8] to-[#a855f7] bg-clip-text text-transparent">{t('empty.justYet')}</span>
+              </h2>
+              <p className="relative z-10 text-white/50 text-sm md:text-base font-medium text-center max-w-md leading-relaxed mb-8 px-4">
+                {t('empty.chatsDesc')}
+              </p>
               <button
                 onClick={() => setActiveMainTab("templates")}
-                className="text-[10px] text-[#22d3ee] hover:text-white border border-[#22d3ee]/20 hover:border-white/20 px-4 py-2 rounded-lg transition-colors"
+                className="relative z-10 text-[11px] font-bold uppercase tracking-widest text-black bg-[#22d3ee] hover:bg-[#e5ff33] px-5 py-2.5 rounded-lg transition-all hover:scale-105 active:scale-95"
               >
-                Browse Templates
+                {t('empty.browseTemplates')}
               </button>
             </div>
           ) : (
@@ -264,6 +283,7 @@ export default function AgentStudio({ apiKey }) {
                   key={conv.id}
                   conv={conv}
                   onClick={handleOpenConversation}
+                  t={t}
                 />
               ))}
             </div>
@@ -271,11 +291,33 @@ export default function AgentStudio({ apiKey }) {
         ) : (
           // ── Agents grid (templates / my-agents) ───────────────────────────
           agents.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-white/10 gap-4">
-              <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.5">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em]">No agents found</p>
+            <div className="h-full flex flex-col items-center justify-center animate-fade-in-up transition-all duration-700 min-h-[50vh] relative">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="w-[460px] h-[460px] bg-[#22d3ee]/10 blur-[150px] rounded-full opacity-70" />
+              </div>
+              <div className="relative z-10 mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/[0.03] backdrop-blur-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22d3ee] animate-pulse" />
+                <span className="text-[11px] font-semibold tracking-[0.2em] uppercase text-white/60">{t('empty.agentsBadge')}</span>
+              </div>
+              <h2 className="relative z-10 text-3xl sm:text-4xl md:text-5xl font-black text-center leading-[0.95] tracking-tighter mb-4 px-4">
+                <span className="block text-white">{activeMainTab === "my-agents" ? t('empty.buildFirst') : t('empty.noAgents')}</span>
+                <span className="block bg-gradient-to-r from-[#22d3ee] via-[#38bdf8] to-[#a855f7] bg-clip-text text-transparent">
+                  {activeMainTab === "my-agents" ? t('empty.aiAgent') : t('empty.foundHere')}
+                </span>
+              </h2>
+              <p className="relative z-10 text-white/50 text-sm md:text-base font-medium text-center max-w-md leading-relaxed mb-8 px-4">
+                {activeMainTab === "my-agents"
+                  ? t('empty.myAgentsDesc')
+                  : t('empty.templatesDesc')}
+              </p>
+              {activeMainTab === "my-agents" && (
+                <button
+                  onClick={handleCreateAgent}
+                  className="relative z-10 text-[11px] font-bold uppercase tracking-widest text-black bg-[#22d3ee] hover:bg-[#e5ff33] px-5 py-2.5 rounded-lg transition-all hover:scale-105 active:scale-95"
+                >
+                  {t('empty.createAgent')}
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6 max-w-[1600px] mx-auto">
@@ -284,6 +326,7 @@ export default function AgentStudio({ apiKey }) {
                   key={agent.agent_id || agent.id}
                   agent={agent}
                   onClick={handleSelectAgent}
+                  t={t}
                 />
               ))}
             </div>
