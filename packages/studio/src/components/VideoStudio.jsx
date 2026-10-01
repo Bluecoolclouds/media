@@ -5,9 +5,9 @@ import { generateVideo, generateI2V, processV2V, uploadFile } from "../muapi.js"
 import { useLang, makeT } from "../i18n/useLang";
 import { videoStudioDict } from "../i18n/dictionaries/videoStudio";
 import {
-  t2vModels,
-  i2vModels,
-  v2vModels,
+  t2vModels as fallbackT2vModels,
+  i2vModels as fallbackI2vModels,
+  v2vModels as fallbackV2vModels,
   getAspectRatiosForVideoModel,
   getDurationsForModel,
   getResolutionsForVideoModel,
@@ -19,6 +19,50 @@ import {
   getModesForModel,
   getMaxImagesForI2VModel,
 } from "../models.js";
+
+// Feature flag for dynamic models
+const USE_DYNAMIC_MODELS = typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_USE_DYNAMIC_MODELS === 'true';
+
+// Hook to fetch models dynamically
+function useDynamicModels(type, fallbackModels) {
+  const [models, setModels] = useState(fallbackModels);
+  const [loading, setLoading] = useState(USE_DYNAMIC_MODELS);
+
+  useEffect(() => {
+    if (!USE_DYNAMIC_MODELS) {
+      setModels(fallbackModels);
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
+    async function fetchModels() {
+      try {
+        const response = await fetch(`/api/models?type=${type}`);
+        const data = await response.json();
+
+        if (mounted && data.success && data.models?.length > 0) {
+          setModels(data.models);
+        } else if (mounted) {
+          setModels(fallbackModels);
+        }
+      } catch (err) {
+        console.error(`Failed to fetch ${type} models, using fallback:`, err);
+        if (mounted) setModels(fallbackModels);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    fetchModels();
+
+    return () => { mounted = false; };
+  }, [type, fallbackModels]);
+
+  return { models, loading };
+}
+
 
 // ── tiny helpers ──────────────────────────────────────────────────────────────
 
@@ -248,12 +292,17 @@ export default function VideoStudio({
 
   const PERSIST_KEY = "hg_video_studio_persistent";
 
+  // ── Dynamic models loading ──────────────────────────────────────────────
+  const { models: t2vModels, loading: t2vLoading } = useDynamicModels('text-to-video', fallbackT2vModels);
+  const { models: i2vModels, loading: i2vLoading } = useDynamicModels('image-to-video', fallbackI2vModels);
+  const v2vModels = fallbackV2vModels; // V2V not commonly in DB, use fallback
+
   // ── mode state ──
   const [imageMode, setImageMode] = useState(false); // i2v
   const [v2vMode, setV2vMode] = useState(false);
 
   // ── model / params ──
-  const defaultModel = t2vModels[0];
+  const defaultModel = t2vModels[0] || fallbackT2vModels[0];
   const [selectedModel, setSelectedModel] = useState(defaultModel.id);
   const [selectedModelName, setSelectedModelName] = useState(defaultModel.name);
   const [selectedAr, setSelectedAr] = useState(

@@ -5,8 +5,8 @@ import { generateImage, generateI2I, uploadFile } from "../muapi.js";
 import { useLang, makeT } from "../i18n/useLang";
 import { imageStudioDict } from "../i18n/dictionaries/imageStudio";
 import {
-  t2iModels,
-  i2iModels,
+  t2iModels as fallbackT2iModels,
+  i2iModels as fallbackI2iModels,
   getAspectRatiosForModel,
   getResolutionsForModel,
   getQualityFieldForModel,
@@ -18,6 +18,49 @@ import {
   getDefaultEffectForI2IModel,
   getI2IModelById,
 } from "../models.js";
+
+// Feature flag for dynamic models
+const USE_DYNAMIC_MODELS = typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_USE_DYNAMIC_MODELS === 'true';
+
+// Hook to fetch models dynamically
+function useDynamicModels(type, fallbackModels) {
+  const [models, setModels] = useState(fallbackModels);
+  const [loading, setLoading] = useState(USE_DYNAMIC_MODELS);
+
+  useEffect(() => {
+    if (!USE_DYNAMIC_MODELS) {
+      setModels(fallbackModels);
+      setLoading(false);
+      return;
+    }
+
+    let mounted = true;
+
+    async function fetchModels() {
+      try {
+        const response = await fetch(`/api/models?type=${type}`);
+        const data = await response.json();
+
+        if (mounted && data.success && data.models?.length > 0) {
+          setModels(data.models);
+        } else if (mounted) {
+          setModels(fallbackModels);
+        }
+      } catch (err) {
+        console.error(`Failed to fetch ${type} models, using fallback:`, err);
+        if (mounted) setModels(fallbackModels);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    fetchModels();
+
+    return () => { mounted = false; };
+  }, [type, fallbackModels]);
+
+  return { models, loading };
+}
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -751,15 +794,19 @@ export default function ImageStudio({
   const lang = useLang();
   const t = makeT(imageStudioDict, lang);
 
+  // ── Dynamic models loading ──────────────────────────────────────────────
+  const { models: t2iModels, loading: t2iLoading } = useDynamicModels('text-to-image', fallbackT2iModels);
+  const { models: i2iModels, loading: i2iLoading } = useDynamicModels('image-to-image', fallbackI2iModels);
+
   // ── Model / mode state ──────────────────────────────────────────────────
   const [imageMode, setImageMode] = useState(false); // false=t2i, true=i2i
-  const [selectedModelId, setSelectedModelId] = useState(t2iModels[0].id);
-  const [selectedModelName, setSelectedModelName] = useState(t2iModels[0].name);
+  const [selectedModelId, setSelectedModelId] = useState(t2iModels[0]?.id || fallbackT2iModels[0].id);
+  const [selectedModelName, setSelectedModelName] = useState(t2iModels[0]?.name || fallbackT2iModels[0].name);
   const [selectedAr, setSelectedAr] = useState(
-    t2iModels[0].inputs?.aspect_ratio?.default || "1:1",
+    t2iModels[0]?.inputs?.aspect_ratio?.default || "1:1",
   );
   const [selectedQuality, setSelectedQuality] = useState(() => {
-    const resolutions = getResolutionsForModel(t2iModels[0].id);
+    const resolutions = getResolutionsForModel(t2iModels[0]?.id || fallbackT2iModels[0].id);
     return resolutions[0] || null;
   });
   const [selectedEffect, setSelectedEffect] = useState("");
