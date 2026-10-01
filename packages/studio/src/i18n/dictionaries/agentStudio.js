@@ -33,6 +33,16 @@ export const agentStudioDict = {
         'empty.myAgentsDesc': 'Create a custom AI agent with its own instructions, tools and personality.',
         'empty.templatesDesc': 'Nothing to show in this section yet.',
         'empty.createAgent': '+ Create Agent',
+
+        'create.title': 'Create an agent',
+        'create.subtitle': 'Describe what your assistant should do — we\'ll architect it for you.',
+        'create.label': 'What should your assistant be able to do?',
+        'create.placeholder': 'Ex: A helpful travel agent that finds the best destinations in Italy...',
+        'create.submit': 'Create agent',
+        'create.creating': 'Creating agent...',
+        'create.analyzing': 'Analyzing prompt and building capabilities...',
+        'create.cancel': 'Cancel',
+        'create.error': 'Failed to create agent. Please try again.',
     },
     ru: {
         'header.title': 'Агенты',
@@ -68,5 +78,15 @@ export const agentStudioDict = {
         'empty.myAgentsDesc': 'Создайте собственного AI-агента с уникальными инструкциями, инструментами и характером.',
         'empty.templatesDesc': 'В этом разделе пока ничего нет.',
         'empty.createAgent': '+ Создать агента',
+
+        'create.title': 'Создание агента',
+        'create.subtitle': 'Опишите, что должен уметь ваш ассистент — мы соберём его за вас.',
+        'create.label': 'Что должен уметь ваш ассистент?',
+        'create.placeholder': 'Например: полезный турагент, который находит лучшие направления в Италии...',
+        'create.submit': 'Создать агента',
+        'create.creating': 'Создаём агента...',
+        'create.analyzing': 'Анализируем запрос и собираем возможности...',
+        'create.cancel': 'Отмена',
+        'create.error': 'Не удалось создать агента. Попробуйте ещё раз.',
     },
 };

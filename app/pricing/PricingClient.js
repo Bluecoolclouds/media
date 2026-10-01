@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useLang, pricingContent } from 'studio';
+// Deep imports, not the `studio` barrel — see the note in app/LandingClient.js.
+import { useLang } from 'studio/src/i18n/useLang';
+import { pricingContent } from 'studio/src/i18n/dictionaries/pricing';
 
 const CheckIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="shrink-0">

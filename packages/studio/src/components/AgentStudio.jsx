@@ -6,6 +6,8 @@ import {
   getTemplateAgents,
   getUserAgents,
   getUserConversations,
+  suggestAgent,
+  createAgent,
 } from "../muapi.js";
 import { useLang, makeT } from "../i18n/useLang";
 import { agentStudioDict } from "../i18n/dictionaries/agentStudio";
@@ -135,6 +137,12 @@ export default function AgentStudio({ apiKey }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Create-agent modal state (replaces navigation to /agents/create)
+  const [showCreate, setShowCreate] = useState(false);
+  const [createPrompt, setCreatePrompt] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState(null);
+
   // Navigate to the standalone /agents page — AiAgent handles its own routing there
   const handleSelectAgent = useCallback(
     (agent) => {
@@ -152,9 +160,43 @@ export default function AgentStudio({ apiKey }) {
     [router]
   );
 
+  // Open the in-place create modal instead of navigating to /agents/create.
   const handleCreateAgent = useCallback(() => {
-    router.push("/agents/create");
-  }, [router]);
+    setCreateError(null);
+    setCreatePrompt("");
+    setShowCreate(true);
+  }, []);
+
+  // Architect + create the agent from the prompt, then jump into its editor.
+  const handleSubmitCreate = useCallback(async (e) => {
+    if (e) e.preventDefault();
+    const prompt = createPrompt.trim();
+    if (!prompt || creating) return;
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const suggestion = await suggestAgent(apiKey, prompt);
+      const payload = {
+        name: suggestion.name || "Unnamed Agent",
+        description: suggestion.description || "",
+        system_prompt: suggestion.system_prompt || "",
+        skill_ids: suggestion.recommended_skill_ids || [],
+        welcome_message: suggestion.welcome_message || "",
+        initial_suggestions: suggestion.initial_suggestions || [],
+        is_published: false,
+        is_template: false,
+      };
+      const created = await createAgent(apiKey, payload);
+      const id = created.agent_id || created.id;
+      setShowCreate(false);
+      if (id) router.push(`/agents/edit/${id}`);
+    } catch (err) {
+      console.error("Agent creation failed:", err);
+      setCreateError(err.message || t('create.error'));
+    } finally {
+      setCreating(false);
+    }
+  }, [apiKey, createPrompt, creating, router, t]);
 
   const handleOpenConversation = useCallback(
     (agentSlug, convId) => {
@@ -164,7 +206,14 @@ export default function AgentStudio({ apiKey }) {
   );
 
   useEffect(() => {
-    if (!apiKey) return;
+    // No key yet (not signed in / no env key): don't hang on the spinner.
+    // Show the empty state and let the user sign in to load real data.
+    if (!apiKey) {
+      setLoading(false);
+      setAgents([]);
+      setConversations([]);
+      return;
+    }
     let cancelled = false;
 
     async function load() {
@@ -333,6 +382,88 @@ export default function AgentStudio({ apiKey }) {
           )
         )}
       </div>
+
+      {/* Create-agent modal — replaces the old /agents/create page */}
+      {showCreate && (
+        <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => !creating && setShowCreate(false)}
+          />
+          <div className="relative w-full max-w-lg bg-[#0a0a0a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up">
+            <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-white/5">
+              <div className="space-y-1">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-[#22d3ee]">
+                  {t('create.title')}
+                </h3>
+                <p className="text-[12px] leading-snug text-white/45">
+                  {t('create.subtitle')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => !creating && setShowCreate(false)}
+                className="size-8 rounded-full bg-white/5 border border-white/[0.06] flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-40"
+                disabled={creating}
+              >
+                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitCreate} className="p-6 space-y-5">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-widest text-white/60">
+                  {t('create.label')}
+                </label>
+                <textarea
+                  value={createPrompt}
+                  autoFocus
+                  onChange={(e) => { setCreatePrompt(e.target.value); setCreateError(null); }}
+                  placeholder={t('create.placeholder')}
+                  disabled={creating}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-sm text-white placeholder:text-white/20 focus:outline-none focus:border-[#22d3ee]/50 transition-colors resize-none min-h-[140px] disabled:opacity-60"
+                />
+              </div>
+
+              {createError && (
+                <p className="text-[12px] text-red-400/90">{createError}</p>
+              )}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(false)}
+                  disabled={creating}
+                  className="px-5 py-3 rounded-xl bg-white/5 border border-white/10 text-white/70 text-sm font-bold hover:bg-white/10 hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {t('create.cancel')}
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating || !createPrompt.trim()}
+                  className="flex-1 py-3 rounded-xl bg-[#22d3ee] text-black text-sm font-bold hover:bg-[#e5ff33] transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {creating ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                      {t('create.creating')}
+                    </>
+                  ) : (
+                    t('create.submit')
+                  )}
+                </button>
+              </div>
+              {creating && (
+                <p className="text-center text-white/40 text-xs animate-pulse">
+                  {t('create.analyzing')}
+                </p>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

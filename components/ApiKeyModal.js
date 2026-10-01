@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useLang, makeT, shellDict } from 'studio';
+// Deep imports, not the `studio` barrel — see the note in components/StandaloneShell.js.
+import { useLang, makeT } from 'studio/src/i18n/useLang';
+import { shellDict } from 'studio/src/i18n/dictionaries/shell';
 
 export default function ApiKeyModal({ onSave, onClose, overlay = false, title, subtitle }) {
   const [key, setKey] = useState('');

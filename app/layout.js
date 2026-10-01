@@ -1,5 +1,6 @@
 import './globals.css';
 import { Inter } from "next/font/google";
+import HtmlLangSync from '../components/HtmlLangSync';
 
 const inter = Inter({
   variable: "--font-inter",
@@ -12,9 +13,13 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  // lang="en" is the SSR default; HtmlLangSync corrects it on the client.
   return (
     <html lang="en">
-      <body className={inter.variable}>{children}</body>
+      <body className={inter.variable}>
+        <HtmlLangSync />
+        {children}
+      </body>
     </html>
   );
 }

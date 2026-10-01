@@ -3,16 +3,45 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { ImageStudio, VideoStudio, AvatarStudio, ClippingStudio, VibeMotionStudio, LipSyncStudio, RecastStudio, CinemaStudio, AudioStudio, MarketingStudio, ProductCardStudio, WorkflowStudio, AgentStudio, getUserBalance, useLang, setLang as setAppLang, makeT, shellDict, LANG_CYCLE, LANG_LABEL } from 'studio';
-
-const DesignAgentStudio = dynamic(() => import('studio').then(mod => mod.DesignAgentStudio), {
-  ssr: false,
-  loading: () => <div className="h-full w-full bg-black flex items-center justify-center text-white/20">Loading Design Studio...</div>
-});
 import axios from 'axios';
+// Deep imports, never the `studio` barrel: the barrel statically re-exports all 15
+// studios, so a single named import from it pulls every studio into this page's
+// first load and defeats the dynamic() splitting below.
+import { getUserBalance } from 'studio/src/muapi';
+import { useLang, makeT } from 'studio/src/i18n/useLang';
+import { setLang as setAppLang, LANG_CYCLE, LANG_LABEL } from 'studio/src/i18n/core';
+import { shellDict } from 'studio/src/i18n/dictionaries/shell';
 import ApiKeyModal from './ApiKeyModal';
 import AuthModal from './AuthModal';
 import ProfileMenu from './ProfileMenu';
+
+// Each studio is code-split so a tab only downloads the bundle it needs.
+// Previously all 14 studios (incl. reactflow ~676KB, syntax-highlighter ~1.5MB)
+// loaded on every /studio visit — that was the source of the long spinner.
+const StudioLoader = () => (
+  <div className="h-full w-full flex items-center justify-center text-[#22d3ee]/60">
+    <div className="animate-spin text-3xl">◌</div>
+  </div>
+);
+// Each import path must be a literal pointing at one component file. Routing them
+// all through import('studio') would put every studio in one shared async chunk,
+// so opening any tab would download all 14.
+const lazyStudio = (load) => dynamic(load, { ssr: false, loading: StudioLoader });
+
+const ImageStudio = lazyStudio(() => import('studio/src/components/ImageStudio'));
+const VideoStudio = lazyStudio(() => import('studio/src/components/VideoStudio'));
+const AvatarStudio = lazyStudio(() => import('studio/src/components/AvatarStudio'));
+const ClippingStudio = lazyStudio(() => import('studio/src/components/ClippingStudio'));
+const VibeMotionStudio = lazyStudio(() => import('studio/src/components/VibeMotionStudio'));
+const LipSyncStudio = lazyStudio(() => import('studio/src/components/LipSyncStudio'));
+const RecastStudio = lazyStudio(() => import('studio/src/components/RecastStudio'));
+const CinemaStudio = lazyStudio(() => import('studio/src/components/CinemaStudio'));
+const AudioStudio = lazyStudio(() => import('studio/src/components/AudioStudio'));
+const MarketingStudio = lazyStudio(() => import('studio/src/components/MarketingStudio'));
+const ProductCardStudio = lazyStudio(() => import('studio/src/components/ProductCardStudio'));
+const WorkflowStudio = lazyStudio(() => import('studio/src/components/WorkflowStudio'));
+const AgentStudio = lazyStudio(() => import('studio/src/components/AgentStudio'));
+const DesignAgentStudio = lazyStudio(() => import('studio/src/components/DesignAgentStudio'));
 
 const AUTH_KEY = 'apinet_auth';       // { email, key } persisted after login
 const ENV_KEY = process.env.NEXT_PUBLIC_MUAPI_KEY || '';

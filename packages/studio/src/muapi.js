@@ -426,6 +426,36 @@ export async function getUserConversations(apiKey) {
     return Array.isArray(data) ? data : [];
 };
 
+// POST /agents/suggest — architect an agent spec from a plain-language prompt
+export async function suggestAgent(apiKey, prompt) {
+    const response = await fetch(`${BASE_URL}/agents/suggest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+        body: JSON.stringify({ prompt })
+    });
+    if (!response.ok) {
+        const errText = await response.text();
+        notifyAuthRequired(response.status, errText);
+        throw new Error(`Failed to suggest agent: ${response.status} - ${errText.slice(0, 100)}`);
+    }
+    return await response.json();
+};
+
+// POST /agents — create an agent from a spec payload
+export async function createAgent(apiKey, payload) {
+    const response = await fetch(`${BASE_URL}/agents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+        const errText = await response.text();
+        notifyAuthRequired(response.status, errText);
+        throw new Error(`Failed to create agent: ${response.status} - ${errText.slice(0, 100)}`);
+    }
+    return await response.json();
+};
+
 export async function createWorkflow(apiKey, payload) {
     const response = await fetch(`${BASE_URL}/workflow/create`, {
         method: 'POST',
