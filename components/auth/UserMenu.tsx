@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { clearLocalAuth } from '@/components/account/useAccountAuth';
 
 export function UserMenu() {
   const { data: session } = useSession();
@@ -41,6 +42,8 @@ export function UserMenu() {
   }
 
   const handleSignOut = async () => {
+    // Drop browser-held auth/key state so the next user on this browser can't use it.
+    clearLocalAuth();
     await signOut({ redirect: false });
     router.push('/');
     router.refresh();

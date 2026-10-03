@@ -14,6 +14,7 @@ import { shellDict } from 'studio/src/i18n/dictionaries/shell';
 import ApiKeyModal from './ApiKeyModal';
 import AuthModal from './AuthModal';
 import SiteHeader from './SiteHeader';
+import { resolveClientMuapiKey, saveMuapiKey } from '../lib/muapiKeyClient';
 
 // Each studio is code-split so a tab only downloads the bundle it needs.
 // Previously all 14 studios (incl. reactflow ~676KB, syntax-highlighter ~1.5MB)
@@ -185,14 +186,21 @@ export default function StandaloneShell() {
       }
     } catch (_) {}
 
-    // Resolve the working API key: stored key → session key → env fallback.
-    const stored = localStorage.getItem(STORAGE_KEY) || ENV_KEY;
-    if (stored) {
-      setApiKey(stored);
-      fetchBalance(stored);
-      document.cookie = `muapi_key=${stored}; path=/; max-age=31536000; SameSite=Lax`;
-    }
-
+    // Resolve the working API key: server-stored (signed in) → localStorage → env.
+    // For a server-stored key `key` is a session placeholder; the /api proxies
+    // substitute the real key, so the browser never holds it.
+    let cancelled = false;
+    resolveClientMuapiKey({ envKey: ENV_KEY }).then(({ key, source }) => {
+      if (cancelled || !key) return;
+      setApiKey(key);
+      fetchBalance(key);
+      // The legacy cookie outranks the session in the proxies, so only set it
+      // for browser-held keys.
+      if (source !== 'server') {
+        document.cookie = `muapi_key=${key}; path=/; max-age=31536000; SameSite=Lax`;
+      }
+    });
+    return () => { cancelled = true; };
   }, [fetchBalance]);
 
   // Only prompt sign-in when the user actually tries to sign up/generate
@@ -214,13 +222,20 @@ export default function StandaloneShell() {
       localStorage.setItem(AUTH_KEY, JSON.stringify({ ...prev, email, signedInAt: new Date().toISOString() }));
     } catch (_) {}
 
-    // Prefer a user-provided key; otherwise fall back to the env/shared key so the studio works.
-    const effectiveKey = (key && key.trim()) || ENV_KEY;
-    if (effectiveKey) {
-      localStorage.setItem(STORAGE_KEY, effectiveKey);
-      setApiKey(effectiveKey);
-      fetchBalance(effectiveKey);
-      document.cookie = `muapi_key=${effectiveKey}; path=/; max-age=31536000; SameSite=Lax`;
+    // Prefer a user-provided key (saved server-side when signed in, else in
+    // localStorage); otherwise fall back to the env/shared key so the studio works.
+    const userKey = key && key.trim();
+    if (userKey) {
+      saveMuapiKey(userKey).then((result) => {
+        if (!result.ok) return;
+        setApiKey(result.key);
+        fetchBalance(result.key);
+      });
+    } else if (ENV_KEY) {
+      localStorage.setItem(STORAGE_KEY, ENV_KEY);
+      setApiKey(ENV_KEY);
+      fetchBalance(ENV_KEY);
+      document.cookie = `muapi_key=${ENV_KEY}; path=/; max-age=31536000; SameSite=Lax`;
     }
   }, [fetchBalance]);
 
@@ -240,11 +255,12 @@ export default function StandaloneShell() {
     setAppLang(next);
   }, [lang]);
 
-  const handleKeySave = useCallback((key) => {
-    localStorage.setItem(STORAGE_KEY, key);
-    setApiKey(key);
-    fetchBalance(key);
-    document.cookie = `muapi_key=${key}; path=/; max-age=31536000; SameSite=Lax`;
+  const handleKeySave = useCallback(async (key) => {
+    // Server when signed in, localStorage otherwise (see lib/muapiKeyClient.js).
+    const result = await saveMuapiKey(key);
+    if (!result.ok) return;
+    setApiKey(result.key);
+    fetchBalance(result.key);
   }, [fetchBalance]);
 
   // Inject API key into all outgoing Axios requests (prop-based approach)

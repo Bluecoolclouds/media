@@ -1,19 +1,14 @@
 import { NextResponse } from 'next/server';
+import { resolveMuapiKey } from "@/lib/muapiKey";
+import { SESSION_KEY_SENTINEL } from "@/lib/muapiKeyShared";
 
 const MUAPI_BASE = process.env.API_BASE || 'https://api.muapi.ai';
 
-function getApiKey(request) {
-    // Priority 1: Direct x-api-key header
-    const headerKey = request.headers.get('x-api-key');
-    if (headerKey) return headerKey;
-
-    // Priority 2: muapi_key cookie (used by the fixed builder library)
-    const cookieKey = request.cookies.get('muapi_key')?.value;
-    return cookieKey;
-}
 
 function cleanHeaders(request) {
     const headers = new Headers(request.headers);
+    // Never forward the session placeholder upstream; resolveMuapiKey sets the real key.
+    if (headers.get("x-api-key") === SESSION_KEY_SENTINEL) headers.delete("x-api-key");
     headers.delete('host');
     headers.delete('connection');
     headers.delete('cookie'); // CRITICAL: Stop forwarding browser cookies to MuAPI to avoid auth conflicts
@@ -30,8 +25,7 @@ export async function GET(request, { params }) {
 
     const headers = cleanHeaders(request);
 
-    const apiKey = getApiKey(request);
-    console.log(`[proxy GET] ${targetUrl} | apiKey: ${apiKey ? apiKey.slice(0,8)+'...' : 'MISSING'}`);
+    const apiKey = await resolveMuapiKey(request);
     if (apiKey) headers.set('x-api-key', apiKey);
 
     try {
@@ -59,8 +53,7 @@ export async function POST(request, { params }) {
 
     const headers = cleanHeaders(request);
 
-    const apiKey = getApiKey(request);
-    console.log(`[proxy POST] ${targetUrl} | apiKey: ${apiKey ? apiKey.slice(0,8)+'...' : 'MISSING'} | cookie: ${request.cookies.get('muapi_key')?.value?.slice(0,8) || 'NONE'} | header: ${request.headers.get('x-api-key')?.slice(0,8) || 'NONE'}`);
+    const apiKey = await resolveMuapiKey(request);
     if (apiKey) headers.set('x-api-key', apiKey);
 
     try {
@@ -94,7 +87,7 @@ export async function DELETE(request, { params }) {
 
     const headers = cleanHeaders(request);
 
-    const apiKey = getApiKey(request);
+    const apiKey = await resolveMuapiKey(request);
     if (apiKey) headers.set('x-api-key', apiKey);
 
     try {
@@ -119,7 +112,7 @@ export async function PUT(request, { params }) {
 
     const headers = cleanHeaders(request);
 
-    const apiKey = getApiKey(request);
+    const apiKey = await resolveMuapiKey(request);
     if (apiKey) headers.set('x-api-key', apiKey);
 
     try {

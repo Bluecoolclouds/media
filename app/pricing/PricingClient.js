@@ -9,6 +9,7 @@ import { pricingContent } from 'studio/src/i18n/dictionaries/pricing';
 import SiteHeader from '@/components/SiteHeader';
 import AuthModal from '@/components/AuthModal';
 import { useLocalAuth, AUTH_KEY, STORAGE_KEY } from '@/components/account/useLocalAuth';
+import { saveMuapiKey } from '@/lib/muapiKeyClient';
 
 const CheckIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="shrink-0">
@@ -62,7 +63,7 @@ export default function PricingClient() {
     setAppLang(next);
   };
 
-  const handleAuthSuccess = ({ key, email: newEmail }) => {
+  const handleAuthSuccess = async ({ key, email: newEmail }) => {
     setShowAuth(false);
     try {
       const raw = localStorage.getItem(AUTH_KEY);
@@ -71,9 +72,8 @@ export default function PricingClient() {
     } catch (_) {}
     const effectiveKey = key && key.trim();
     if (effectiveKey) {
-      localStorage.setItem(STORAGE_KEY, effectiveKey);
-      document.cookie = `muapi_key=${effectiveKey}; path=/; max-age=31536000; SameSite=Lax`;
-      fetchBalance(effectiveKey);
+      // Server when signed in, localStorage otherwise.
+      await saveMuapiKey(effectiveKey);
     }
     window.location.reload();
   };

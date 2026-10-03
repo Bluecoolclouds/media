@@ -6,8 +6,8 @@ import toast, { Toaster } from 'react-hot-toast';
 import { useLang } from 'studio/src/i18n/useLang';
 import { setLang as setAppLang, LANG_CYCLE, LANG_LABEL } from 'studio/src/i18n/core';
 import AccountShell from '@/components/account/AccountShell';
-import { STORAGE_KEY } from '@/components/account/useLocalAuth';
 import { useAccountAuth, signOutAndClear } from '@/components/account/useAccountAuth';
+import { saveMuapiKey, deleteMuapiKey } from '@/lib/muapiKeyClient';
 
 const LANG_FULL_LABEL = { en: 'English', ru: 'Русский' };
 
@@ -41,8 +41,8 @@ export default function AccountClient() {
   const router = useRouter();
   const lang = useLang();
   // Identity (name/email) comes from the NextAuth session and is read-only here.
-  // Only the MuAPI key is still stored locally, so that's all the form edits.
-  const { hasMounted, email, name, apiKey, setApiKey, usd, credits, username, fetchBalance } = useAccountAuth();
+  // The MuAPI key is saved encrypted on the server; the form only ever shows a mask.
+  const { hasMounted, email, name, maskedKey, setMaskedKey, setApiKey, usd, credits, username, fetchBalance } = useAccountAuth();
 
   const [editing, setEditing] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -51,28 +51,40 @@ export default function AccountClient() {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   const startEditing = () => {
-    setApiKeyInput(apiKey);
+    // Never prefill the real key; the input is write-only.
+    setApiKeyInput('');
     setEditing(true);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setSaving(true);
-    try {
-      const trimmedKey = apiKeyInput.trim();
-      if (trimmedKey) {
-        localStorage.setItem(STORAGE_KEY, trimmedKey);
-        document.cookie = `muapi_key=${trimmedKey}; path=/; max-age=31536000; SameSite=Lax`;
-        setApiKey(trimmedKey);
-        fetchBalance(trimmedKey);
-      }
-      toast.success('API key updated');
+    if (!apiKeyInput.trim()) {
       setEditing(false);
-    } catch (err) {
-      toast.error('Failed to save API key');
-    } finally {
-      setSaving(false);
+      return;
     }
+    setSaving(true);
+    const result = await saveMuapiKey(apiKeyInput);
+    setSaving(false);
+    if (!result.ok) {
+      toast.error(result.error || 'Failed to save API key');
+      return;
+    }
+    setApiKey(result.key);
+    setMaskedKey(result.masked);
+    fetchBalance(result.key);
+    setApiKeyInput('');
+    toast.success(result.source === 'server' ? 'API key saved to your account' : 'API key saved in this browser');
+    setEditing(false);
+  };
+
+  const handleRemoveKey = async () => {
+    setSaving(true);
+    await deleteMuapiKey();
+    setSaving(false);
+    setApiKey('');
+    setMaskedKey(null);
+    toast.success('API key removed');
+    setEditing(false);
   };
 
   const handleSignOut = () => signOutAndClear('/');
@@ -114,17 +126,30 @@ export default function AccountClient() {
         <form onSubmit={handleSave} className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-4">
           <p className="text-[11px] text-white/35">Name and email come from your sign-in account and can't be edited here.</p>
           <div className="space-y-1.5">
-            <label htmlFor="apiKey" className="block text-xs font-medium text-white/50">API key</label>
+            <label htmlFor="apiKey" className="block text-xs font-medium text-white/50">
+              API key {maskedKey && <span className="font-mono text-white/35">(current: {maskedKey})</span>}
+            </label>
             <input
               id="apiKey"
               type="password"
+              autoComplete="off"
               value={apiKeyInput}
               onChange={(e) => setApiKeyInput(e.target.value)}
-              placeholder="sk-..."
+              placeholder={maskedKey ? 'Enter a new key to replace it' : 'sk-...'}
               className="w-full px-3.5 py-2.5 bg-white/5 border border-white/10 text-white text-sm rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none placeholder:text-white/20 font-mono"
             />
-            <p className="text-[11px] text-white/35">Stored locally in this browser. Used to generate content and fetch your balance.</p>
+            <p className="text-[11px] text-white/35">Stored encrypted with your account. Used to generate content and fetch your balance.</p>
           </div>
+          {maskedKey && (
+            <button
+              type="button"
+              onClick={handleRemoveKey}
+              disabled={saving}
+              className="text-xs font-medium text-red-400 hover:text-red-300 disabled:opacity-50"
+            >
+              Remove saved key
+            </button>
+          )}
           <div className="flex gap-2">
             <button
               type="submit"

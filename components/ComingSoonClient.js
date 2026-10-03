@@ -7,6 +7,7 @@ import { setLang as setAppLang, LANG_CYCLE } from 'studio/src/i18n/core';
 import SiteHeader from './SiteHeader';
 import AuthModal from './AuthModal';
 import { useLocalAuth, AUTH_KEY, STORAGE_KEY } from './account/useLocalAuth';
+import { saveMuapiKey } from '../lib/muapiKeyClient';
 
 export default function ComingSoonClient({ title, description, emoji }) {
   const router = useRouter();
@@ -20,7 +21,7 @@ export default function ComingSoonClient({ title, description, emoji }) {
     setAppLang(next);
   };
 
-  const handleAuthSuccess = ({ key, email: newEmail }) => {
+  const handleAuthSuccess = async ({ key, email: newEmail }) => {
     setShowAuth(false);
     try {
       const raw = localStorage.getItem(AUTH_KEY);
@@ -29,9 +30,8 @@ export default function ComingSoonClient({ title, description, emoji }) {
     } catch (_) {}
     const effectiveKey = key && key.trim();
     if (effectiveKey) {
-      localStorage.setItem(STORAGE_KEY, effectiveKey);
-      document.cookie = `muapi_key=${effectiveKey}; path=/; max-age=31536000; SameSite=Lax`;
-      fetchBalance(effectiveKey);
+      // Server when signed in, localStorage otherwise.
+      await saveMuapiKey(effectiveKey);
     }
     window.location.reload();
   };

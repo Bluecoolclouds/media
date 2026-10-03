@@ -4,6 +4,7 @@ import { AiAgent } from "ai-agent";
 import "ai-agent/dist/tailwind.css";
 import { useCallback, useEffect, useRef } from "react";
 import axios from "axios";
+import { SESSION_KEY_SENTINEL } from "@/lib/muapiKeyShared";
 
 const STORAGE_KEY = "muapi_key";
 
@@ -31,7 +32,9 @@ export default function AgentChatClient({ agentDetails, initialHistory, userData
       const fromStorage = localStorage.getItem(STORAGE_KEY);
       if (fromStorage) return fromStorage;
       const match = document.cookie.match(/muapi_key=([^;]+)/);
-      return match ? match[1] : null;
+      // No browser-held key: ask the proxies to use the signed-in user's
+      // server-stored key (they ignore this for anonymous requests).
+      return match ? match[1] : SESSION_KEY_SENTINEL;
     };
 
     const apiKey = getKey();

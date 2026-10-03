@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { signOutAndClear } from '@/components/account/useAccountAuth';
 
 function BackIcon() {
   return (
@@ -23,7 +23,7 @@ export default function ProfilePageClient({ user, generations }) {
   const [activeTab, setActiveTab] = useState('all');
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/' });
+    await signOutAndClear('/');
   };
 
   const stats = {

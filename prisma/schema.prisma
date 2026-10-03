@@ -54,6 +54,9 @@ model User {
   image         String?
   password      String?
   role          UserRole  @default(USER)
+  // Per-user MuAPI key, AES-256-GCM encrypted (lib/crypto.ts). Never store plaintext.
+  muapiKeyEncrypted String?   @db.Text
+  muapiKeyUpdatedAt DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

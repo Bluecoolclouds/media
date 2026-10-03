@@ -4,17 +4,21 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { getUserBalance } from 'studio/src/muapi';
 import { AUTH_KEY, STORAGE_KEY, CREDITS_PER_USD } from './useLocalAuth';
+// Note: sign-out only clears the browser copy; the server-stored key stays
+// with the account and is available again on next sign-in.
+import { resolveClientMuapiKey } from '@/lib/muapiKeyClient';
 
 /**
  * Account/affiliate auth state. Identity (email, name, role) comes ONLY from
- * the NextAuth session. localStorage is used solely for the MuAPI key
- * (STORAGE_KEY) and the balance it unlocks — never to decide who the user is.
+ * the NextAuth session. The MuAPI key is stored server-side for signed-in
+ * users (lib/muapiKeyClient.js); localStorage is only an anonymous fallback.
  * Must be rendered under a next-auth <SessionProvider>.
  */
 export function useAccountAuth() {
   const { data: session, status } = useSession();
   const [hasMounted, setHasMounted] = useState(false);
   const [apiKey, setApiKey] = useState('');
+  const [maskedKey, setMaskedKey] = useState(null);
   const [balance, setBalance] = useState(null);
 
   const fetchBalance = useCallback(async (key) => {
@@ -28,14 +32,19 @@ export function useAccountAuth() {
   }, []);
 
   useEffect(() => {
-    setHasMounted(true);
-    let stored = '';
-    try {
-      stored = localStorage.getItem(STORAGE_KEY) || '';
-    } catch (_) {}
-    setApiKey(stored);
-    if (stored) fetchBalance(stored);
-  }, [fetchBalance]);
+    if (status === 'loading') return;
+    let cancelled = false;
+    // Signed in: key comes from the server (apiKey is the session placeholder,
+    // the proxies substitute the real key). Signed out: localStorage fallback.
+    resolveClientMuapiKey().then(({ key, masked }) => {
+      if (cancelled) return;
+      setApiKey(key);
+      setMaskedKey(masked);
+      setHasMounted(true);
+      if (key) fetchBalance(key);
+    });
+    return () => { cancelled = true; };
+  }, [status, fetchBalance]);
 
   const user = session?.user || null;
   const email = user?.email || '';
@@ -47,13 +56,17 @@ export function useAccountAuth() {
   return {
     status,
     isAuthed: status === 'authenticated',
-    // Ready once localStorage was read and the session is resolved.
+    // Ready once the session and the MuAPI key source are both resolved.
     hasMounted: hasMounted && status !== 'loading',
     user,
     email,
     name,
+    // Opaque value to pass as x-api-key; for signed-in users it is the session
+    // placeholder, not the real key. Display `maskedKey` instead of this.
     apiKey,
     setApiKey,
+    maskedKey,
+    setMaskedKey,
     usd,
     credits,
     username,

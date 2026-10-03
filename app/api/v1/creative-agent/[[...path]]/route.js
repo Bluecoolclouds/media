@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server';
+import { resolveMuapiKey } from "@/lib/muapiKey";
+import { SESSION_KEY_SENTINEL } from "@/lib/muapiKeyShared";
 
 const MUAPI_BASE = process.env.API_BASE || 'https://api.muapi.ai';
 
-function getApiKey(request) {
+// Bearer token takes priority (existing behavior); otherwise resolveMuapiKey
+// checks x-api-key, the legacy cookie, then the signed-in user's stored key.
+async function getApiKey(request) {
     const authHeader = request.headers.get('Authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
-        return authHeader.substring(7);
+        const bearer = authHeader.substring(7);
+        // A Bearer sentinel is not a key; never forward it upstream.
+        if (bearer !== SESSION_KEY_SENTINEL) return bearer;
     }
-    const headerKey = request.headers.get('x-api-key');
-    if (headerKey) return headerKey;
-    const cookieKey = request.cookies.get('muapi_key')?.value;
-    return cookieKey;
+    return resolveMuapiKey(request);
 }
 
 function cleanHeaders(request) {
@@ -32,8 +35,7 @@ export async function GET(request, { params }) {
     const targetUrl = `${MUAPI_BASE}/api/v1/creative-agent/${path}${search}`;
 
     const headers = cleanHeaders(request);
-    const apiKey = getApiKey(request);
-    console.log(`[creative-agent proxy GET] ${targetUrl} | apiKey: ${apiKey ? apiKey.slice(0,8)+'...' : 'MISSING'}`);
+    const apiKey = await getApiKey(request);
     
     if (apiKey) headers.set('x-api-key', apiKey);
 
@@ -56,8 +58,7 @@ export async function POST(request, { params }) {
     const targetUrl = `${MUAPI_BASE}/api/v1/creative-agent/${path}${search}`;
 
     const headers = cleanHeaders(request);
-    const apiKey = getApiKey(request);
-    console.log(`[creative-agent proxy POST] ${targetUrl} | apiKey: ${apiKey ? apiKey.slice(0,8)+'...' : 'MISSING'}`);
+    const apiKey = await getApiKey(request);
 
     if (apiKey) headers.set('x-api-key', apiKey);
 
@@ -81,8 +82,7 @@ export async function PATCH(request, { params }) {
     const targetUrl = `${MUAPI_BASE}/api/v1/creative-agent/${path}${search}`;
 
     const headers = cleanHeaders(request);
-    const apiKey = getApiKey(request);
-    console.log(`[creative-agent proxy PATCH] ${targetUrl} | apiKey: ${apiKey ? apiKey.slice(0,8)+'...' : 'MISSING'}`);
+    const apiKey = await getApiKey(request);
 
     if (apiKey) headers.set('x-api-key', apiKey);
 
@@ -106,8 +106,7 @@ export async function DELETE(request, { params }) {
     const targetUrl = `${MUAPI_BASE}/api/v1/creative-agent/${path}${search}`;
 
     const headers = cleanHeaders(request);
-    const apiKey = getApiKey(request);
-    console.log(`[creative-agent proxy DELETE] ${targetUrl} | apiKey: ${apiKey ? apiKey.slice(0,8)+'...' : 'MISSING'}`);
+    const apiKey = await getApiKey(request);
 
     if (apiKey) headers.set('x-api-key', apiKey);
 

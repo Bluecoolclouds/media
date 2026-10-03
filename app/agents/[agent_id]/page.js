@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { getServerComponentMuapiKey } from "@/lib/muapiKey";
 import AgentChatClient from "./AgentChatClient";
 
 /**
@@ -70,7 +71,7 @@ async function fetchUserData(apiKey) {
 export default async function AgentPage({ params }) {
   const { agent_id } = await params;
   const cookieStore = await cookies();
-  const apiKey = cookieStore.get("muapi_key")?.value;
+  const apiKey = await getServerComponentMuapiKey(cookieStore.get("muapi_key")?.value);
 
   console.log(`[AgentPage] Loading page for agent: ${agent_id}, hasKey: ${!!apiKey}`);
 

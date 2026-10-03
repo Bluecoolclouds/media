@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { getUserMuapiKey } from '@/lib/muapiKey';
+import { SESSION_KEY_SENTINEL } from '@/lib/muapiKeyShared';
 
 // OpenAI-compatible image generation proxy (apinet.cloud and similar gateways).
 // Keeps the provider key server-side and normalizes the response to { url }.
@@ -23,7 +25,13 @@ async function getKey(request) {
   }
   const raw =
     request.headers.get('authorization') || request.headers.get('x-api-key') || '';
-  return raw.replace(/^Bearer\s+/i, '').trim();
+  const key = raw.replace(/^Bearer\s+/i, '').trim();
+  // Signed-in studio clients send a placeholder instead of their key; swap in
+  // the stored one, and never forward the placeholder upstream.
+  if (key === SESSION_KEY_SENTINEL) {
+    return (session?.user?.id && (await getUserMuapiKey(session.user.id))) || '';
+  }
+  return key;
 }
 
 export async function POST(request) {
