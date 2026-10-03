@@ -4,6 +4,7 @@ import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 interface CreateAuditLogInput {
+  /** Ignored: the entry is always attributed to the calling admin. */
   userId?: string;
   action: string;
   resource: string;
@@ -11,13 +12,19 @@ interface CreateAuditLogInput {
 }
 
 /**
- * Create an audit log entry
+ * Create an audit log entry.
+ *
+ * Exported from a 'use server' module, so it is a client-callable endpoint:
+ * it requires an admin session and always attributes the entry to that admin,
+ * ignoring any client-supplied userId, so logs can't be forged.
  */
 export async function createAuditLog(input: CreateAuditLogInput) {
+  const admin = await requireAdmin();
+
   try {
     const log = await prisma.auditLog.create({
       data: {
-        userId: input.userId,
+        userId: admin.id,
         action: input.action,
         resource: input.resource,
         details: input.details || {},

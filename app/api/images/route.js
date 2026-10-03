@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/auth';
 
 // OpenAI-compatible image generation proxy (apinet.cloud and similar gateways).
 // Keeps the provider key server-side and normalizes the response to { url }.
@@ -13,15 +14,20 @@ const MODEL_ALIAS = {
   'flux-dev-image': 'flux-1-schnell',
 };
 
-function getKey(request) {
+// The server-side provider key is only spent on behalf of signed-in users.
+// Anonymous callers must bring their own key via x-api-key / Authorization.
+async function getKey(request) {
+  const session = await auth();
+  if (session?.user && process.env.IMAGE_API_KEY) {
+    return process.env.IMAGE_API_KEY;
+  }
   const raw =
     request.headers.get('authorization') || request.headers.get('x-api-key') || '';
-  const fromHeader = raw.replace(/^Bearer\s+/i, '').trim();
-  return process.env.IMAGE_API_KEY || fromHeader || '';
+  return raw.replace(/^Bearer\s+/i, '').trim();
 }
 
 export async function POST(request) {
-  const key = getKey(request);
+  const key = await getKey(request);
   if (!key) {
     return NextResponse.json({ error: 'Missing API key' }, { status: 401 });
   }

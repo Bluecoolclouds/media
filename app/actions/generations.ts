@@ -1,7 +1,16 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth } from '@/lib/auth';
+
+/**
+ * Non-admins may only ever see their own generations, regardless of the
+ * userId the client sends. Admins may filter by any userId (or none).
+ */
+function scopeUserId(user: { id?: string; role?: string }, requested?: string) {
+  if (user.role === 'ADMIN') return requested;
+  return user.id;
+}
 
 export async function getGenerations(params?: {
   page?: number;
@@ -12,10 +21,7 @@ export async function getGenerations(params?: {
   startDate?: Date;
   endDate?: Date;
 }) {
-  const { error: authError } = await requireAuth();
-  if (authError) {
-    throw new Error('Unauthorized');
-  }
+  const user = await requireAuth();
 
   const page = params?.page || 1;
   const limit = params?.limit || 10;
@@ -23,8 +29,9 @@ export async function getGenerations(params?: {
 
   const where: any = {};
 
-  if (params?.userId) {
-    where.userId = params.userId;
+  const userId = scopeUserId(user, params?.userId);
+  if (userId) {
+    where.userId = userId;
   }
 
   if (params?.modelId) {
@@ -86,10 +93,7 @@ export async function getGenerationStats(params?: {
   userId?: string;
   days?: number;
 }) {
-  const { error: authError } = await requireAuth();
-  if (authError) {
-    throw new Error('Unauthorized');
-  }
+  const user = await requireAuth();
 
   const days = params?.days || 30;
   const startDate = new Date();
@@ -101,8 +105,9 @@ export async function getGenerationStats(params?: {
     },
   };
 
-  if (params?.userId) {
-    where.userId = params.userId;
+  const userId = scopeUserId(user, params?.userId);
+  if (userId) {
+    where.userId = userId;
   }
 
   const [totalGenerations, byStatus, byModel] = await Promise.all([
@@ -165,10 +170,7 @@ export async function getGenerationStats(params?: {
 }
 
 export async function getGenerationById(id: string) {
-  const { error: authError } = await requireAuth();
-  if (authError) {
-    throw new Error('Unauthorized');
-  }
+  const user = await requireAuth();
 
   const generation = await prisma.generation.findUnique({
     where: { id },
@@ -191,7 +193,8 @@ export async function getGenerationById(id: string) {
     },
   });
 
-  if (!generation) {
+  // Same error for "missing" and "not yours" so ids can't be probed.
+  if (!generation || (user.role !== 'ADMIN' && generation.userId !== user.id)) {
     throw new Error('Generation not found');
   }
 

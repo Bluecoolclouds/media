@@ -1,25 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { createUserSchema } from '@/lib/validations/user.schema';
+
+// Public sign-up: name is required here, and `role` is never accepted from
+// the client (omitted, so a submitted role is stripped, not honored).
+const registerSchema = createUserSchema
+  .omit({ role: true })
+  .required({ name: true });
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password } = await request.json();
+    const body = await request.json().catch(() => null);
+    const parsed = registerSchema.safeParse(body);
 
-    // Validate input
-    if (!name || !email || !password) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        {
+          error: parsed.error.issues[0]?.message || 'Invalid input',
+          details: parsed.error.issues.map((i) => ({
+            path: i.path.join('.'),
+            message: i.message,
+          })),
+        },
         { status: 400 }
       );
     }
 
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: 'Password must be at least 8 characters long' },
-        { status: 400 }
-      );
-    }
+    const { name, email, password } = parsed.data;
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
