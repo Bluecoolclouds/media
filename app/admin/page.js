@@ -6,78 +6,87 @@ import StatCard from '@/components/admin/StatCard';
 import DataTable from '@/components/admin/DataTable';
 import PageTemplate from '@/components/admin/PageTemplate';
 import { Button } from '@/components/ui/button';
+import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 
-// Mock data - replace with real API calls
-const stats = {
-  totalUsers: 1247,
-  totalGenerations: 15678,
-  activeModels: 12,
-  revenue: '$4,823',
-};
-
-const recentGenerations = [
-  {
-    id: '1',
-    user: 'john@example.com',
-    model: 'DALL-E 3',
-    type: 'Image',
-    status: 'completed',
-    timestamp: '2 mins ago',
-  },
-  {
-    id: '2',
-    user: 'sarah@example.com',
-    model: 'Stable Diffusion',
-    type: 'Image',
-    status: 'completed',
-    timestamp: '5 mins ago',
-  },
-  {
-    id: '3',
-    user: 'mike@example.com',
-    model: 'Runway Gen-2',
-    type: 'Video',
-    status: 'processing',
-    timestamp: '8 mins ago',
-  },
-  {
-    id: '4',
-    user: 'emma@example.com',
-    model: 'Midjourney',
-    type: 'Image',
-    status: 'completed',
-    timestamp: '12 mins ago',
-  },
-  {
-    id: '5',
-    user: 'alex@example.com',
-    model: 'DALL-E 3',
-    type: 'Image',
-    status: 'failed',
-    timestamp: '15 mins ago',
-  },
-];
+// recharts measures the DOM, so load it client-side only and keep it out of the initial bundle.
+const GenerationsChart = dynamic(() => import('./_components/GenerationsChart'), {
+  ssr: false,
+  loading: () => <div className="h-64 animate-pulse rounded-lg bg-white/[0.03]" />,
+});
 
 const columns = [
-  { key: 'user', label: 'User' },
-  { key: 'model', label: 'Model' },
-  { key: 'type', label: 'Type' },
+  { key: 'user', label: 'User', render: (_, row) => row.user?.email || 'Unknown' },
+  { key: 'model', label: 'Model', render: (_, row) => row.model?.name || 'Unknown' },
+  { key: 'type', label: 'Type', render: (_, row) => row.model?.type || '-' },
   {
     key: 'status',
     label: 'Status',
     render: (value) => {
       const variants = {
-        completed: 'success',
-        processing: 'default',
-        failed: 'destructive',
+        COMPLETED: 'success',
+        PROCESSING: 'default',
+        PENDING: 'default',
+        FAILED: 'destructive',
       };
-      return <Badge variant={variants[value]}>{value}</Badge>;
+      return <Badge variant={variants[value] || 'default'}>{value}</Badge>;
     },
   },
-  { key: 'timestamp', label: 'Time', className: 'text-white/60' },
+  {
+    key: 'createdAt',
+    label: 'Time',
+    className: 'text-white/60',
+    render: (value) => new Date(value).toLocaleString()
+  },
 ];
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalGenerations: 0,
+    activeModels: 0,
+    revenue: '$0',
+  });
+  const daily = stats.generations?.daily || [];
+  const [recentGenerations, setRecentGenerations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Fetch stats
+        const statsRes = await fetch('/api/admin/stats');
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          setStats(statsData);
+        }
+
+        // Fetch recent generations
+        const genRes = await fetch('/api/admin/generations?limit=5');
+        if (genRes.ok) {
+          const genData = await genRes.json();
+          setRecentGenerations(genData.generations || []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch admin data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <PageTemplate title="Dashboard" description="Loading...">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-white/60">Loading dashboard data...</div>
+        </div>
+      </PageTemplate>
+    );
+  }
+
   return (
     <PageTemplate
       title="Dashboard"
@@ -138,25 +147,29 @@ export default function AdminDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <DataTable columns={columns} data={recentGenerations} />
+            {recentGenerations.length > 0 ? (
+              <DataTable columns={columns} data={recentGenerations} />
+            ) : (
+              <div className="text-center py-8 text-white/40">
+                No generations yet
+              </div>
+            )}
           </CardContent>
         </Card>
 
-        {/* Generation Trends Chart Placeholder */}
+        {/* Generation Trends: generations per day, last 30 days */}
         <Card>
           <CardHeader>
-            <CardTitle>Generation Trends</CardTitle>
+            <CardTitle>Generation Trends (30 days)</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64 flex items-center justify-center border border-dashed border-white/10 rounded-lg">
-              <div className="text-center">
-                <span className="text-4xl mb-2 block">📈</span>
-                <p className="text-white/40 text-sm">Chart placeholder</p>
-                <p className="text-white/20 text-xs mt-1">
-                  Integration with recharts coming soon
-                </p>
+            {daily.some((d) => d.count > 0) ? (
+              <GenerationsChart data={daily} />
+            ) : (
+              <div className="h-64 flex items-center justify-center border border-dashed border-white/10 rounded-lg text-white/40 text-sm">
+                No generations in the last 30 days
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

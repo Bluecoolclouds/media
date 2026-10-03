@@ -10,6 +10,7 @@ import { getPaginationParams, createPaginatedResponse } from '@/lib/pagination';
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
+
     const { searchParams } = new URL(request.url);
     const { skip, take, page, limit } = getPaginationParams(searchParams);
 

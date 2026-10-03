@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { dailyWindowStart, fillDailySeries } from './daily';
+
+const DAILY_WINDOW_DAYS = 30;
 
 /**
  * GET /api/admin/stats - Get dashboard statistics
@@ -12,13 +15,16 @@ export async function GET(request: NextRequest) {
     const [
       totalUsers,
       totalGenerations,
+      activeModels,
       totalRevenue,
       activeSubscriptions,
       generationsByStatus,
       userGrowth,
+      dailyRows,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.generation.count(),
+      prisma.model.count({ where: { isActive: true } }),
       prisma.generation.aggregate({
         _sum: { cost: true },
       }),
@@ -37,6 +43,14 @@ export async function GET(request: NextRequest) {
           },
         },
       }),
+      // Generations per UTC day for the chart (Prisma groupBy can't truncate dates)
+      prisma.$queryRaw<{ day: Date; count: bigint }[]>`
+        SELECT date_trunc('day', "createdAt") AS day, COUNT(*)::bigint AS count
+        FROM "generations"
+        WHERE "createdAt" >= ${dailyWindowStart(DAILY_WINDOW_DAYS)}
+        GROUP BY day
+        ORDER BY day
+      `,
     ]);
 
     const statusBreakdown = generationsByStatus.reduce(
@@ -48,6 +62,10 @@ export async function GET(request: NextRequest) {
     );
 
     const stats = {
+      totalUsers,
+      totalGenerations,
+      activeModels,
+      revenue: `$${(totalRevenue._sum.cost || 0).toFixed(2)}`,
       users: {
         total: totalUsers,
         newThisMonth: userGrowth,
@@ -55,9 +73,7 @@ export async function GET(request: NextRequest) {
       generations: {
         total: totalGenerations,
         byStatus: statusBreakdown,
-      },
-      revenue: {
-        total: totalRevenue._sum.cost || 0,
+        daily: fillDailySeries(dailyRows, DAILY_WINDOW_DAYS),
       },
       subscriptions: {
         active: activeSubscriptions,

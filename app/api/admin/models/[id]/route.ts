@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { updateModelSchema } from '@/lib/validations/model.schema';
 import { createAuditLog } from '@/app/actions/admin/logs';
+import { clearModelsCache } from '@/lib/services/models';
 
 /**
  * GET /api/admin/models/[id] - Get a single model
@@ -62,6 +63,7 @@ export async function PATCH(
       where: { id },
       data: validatedData,
     });
+    clearModelsCache();
 
     await createAuditLog({
       userId: user.id,
@@ -118,6 +120,7 @@ export async function DELETE(
     await prisma.model.delete({
       where: { id },
     });
+    clearModelsCache();
 
     await createAuditLog({
       userId: user.id,

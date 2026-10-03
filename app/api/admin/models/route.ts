@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { createModelSchema } from '@/lib/validations/model.schema';
 import { getPaginationParams, createPaginatedResponse } from '@/lib/pagination';
 import { createAuditLog } from '@/app/actions/admin/logs';
+import { clearModelsCache } from '@/lib/services/models';
 
 /**
  * GET /api/admin/models - List all models with pagination
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
     const model = await prisma.model.create({
       data: validatedData,
     });
+    clearModelsCache();
 
     await createAuditLog({
       userId: user.id,
