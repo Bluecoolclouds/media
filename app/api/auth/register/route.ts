@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { createUserSchema } from '@/lib/validations/user.schema';
+import { rateLimit, clientIp } from '@/lib/rateLimit';
 
 // Public sign-up: name is required here, and `role` is never accepted from
 // the client (omitted, so a submitted role is stripped, not honored).
@@ -10,6 +11,17 @@ const registerSchema = createUserSchema
   .required({ name: true });
 
 export async function POST(request: NextRequest) {
+  const limit = rateLimit(`register:${clientIp(request.headers)}`, {
+    limit: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: 'Too many registration attempts. Try again later.' },
+      { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } }
+    );
+  }
+
   try {
     const body = await request.json().catch(() => null);
     const parsed = registerSchema.safeParse(body);

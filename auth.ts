@@ -4,6 +4,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { authConfig } from './auth.config';
 import { verifyPassword } from './lib/auth';
 import { prisma } from './lib/prisma';
+import { rateLimit, clientIp } from './lib/rateLimit';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
@@ -18,8 +19,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        // Brute-force guard: per IP and per account. Returning null shows the
+        // generic "invalid credentials" error without revealing the lockout.
+        const window = { limit: 10, windowMs: 15 * 60 * 1000 };
+        const email = String(credentials.email).toLowerCase();
+        const byIp = rateLimit(`login:ip:${clientIp(request.headers)}`, window);
+        const byEmail = rateLimit(`login:email:${email}`, window);
+        if (!byIp.allowed || !byEmail.allowed) {
           return null;
         }
 
