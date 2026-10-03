@@ -9,11 +9,11 @@ import axios from 'axios';
 // first load and defeats the dynamic() splitting below.
 import { getUserBalance } from 'studio/src/muapi';
 import { useLang, makeT } from 'studio/src/i18n/useLang';
-import { setLang as setAppLang, LANG_CYCLE, LANG_LABEL } from 'studio/src/i18n/core';
+import { setLang as setAppLang, LANG_CYCLE } from 'studio/src/i18n/core';
 import { shellDict } from 'studio/src/i18n/dictionaries/shell';
 import ApiKeyModal from './ApiKeyModal';
 import AuthModal from './AuthModal';
-import ProfileMenu from './ProfileMenu';
+import SiteHeader from './SiteHeader';
 
 // Each studio is code-split so a tab only downloads the bundle it needs.
 // Previously all 14 studios (incl. reactflow ~676KB, syntax-highlighter ~1.5MB)
@@ -208,7 +208,11 @@ export default function StandaloneShell() {
     setUserEmail(email);
     setIsAuthed(true);
     setShowAuth(false);
-    try { localStorage.setItem(AUTH_KEY, JSON.stringify({ email })); } catch (_) {}
+    try {
+      const raw = localStorage.getItem(AUTH_KEY);
+      const prev = raw ? JSON.parse(raw) : {};
+      localStorage.setItem(AUTH_KEY, JSON.stringify({ ...prev, email, signedInAt: new Date().toISOString() }));
+    } catch (_) {}
 
     // Prefer a user-provided key; otherwise fall back to the env/shared key so the studio works.
     const effectiveKey = (key && key.trim()) || ENV_KEY;
@@ -345,93 +349,42 @@ export default function StandaloneShell() {
 
       {/* Header — compact pill-nav layout modeled on higgsfield.ai's header */}
       {isHeaderVisible && (
-        <header className="flex-shrink-0 h-[52px] border-b border-white/[0.06] flex items-center gap-3 px-4 sm:px-6 bg-black/40 backdrop-blur-md z-40">
-          {/* Left: Logo */}
-          <button
-            onClick={() => router.push('/studio')}
-            className="flex-shrink-0 flex items-center gap-2"
-          >
-            <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-              </svg>
-            </div>
-            <span className="text-sm font-bold tracking-tight hidden sm:block">apinet.cloud</span>
-          </button>
+        <SiteHeader
+          lang={lang}
+          onLangChange={handleLangChange}
+          balance={balance}
+          isAuthed={isAuthed}
+          userEmail={userEmail}
+          onSignIn={() => setShowAuth(true)}
+          onSignOut={handleSignOut}
+          centerContent={
+            <nav className="flex-1 min-w-0 relative overflow-hidden h-full flex items-center">
+              <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[#030303] to-transparent pointer-events-none z-10" />
 
-          {/* Center: Pill nav with fade edges + group separators */}
-          <nav className="flex-1 min-w-0 relative overflow-hidden h-full flex items-center">
-            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-[#030303] to-transparent pointer-events-none z-10" />
+              <ul className="flex items-center gap-0.5 overflow-x-auto scrollbar-none h-full px-2">
+                {TAB_IDS.map((tab, i) => (
+                  <li key={tab.id} className="flex items-center flex-shrink-0">
+                    <button
+                      onClick={() => handleTabChange(tab.id)}
+                      className={`px-2.5 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-colors ${
+                        activeTab === tab.id
+                          ? 'bg-white/10 text-white'
+                          : 'text-white/50 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      {t(tab.key)}
+                    </button>
+                    {(i === 3 || i === 10) && (
+                      <span className="mx-1 h-3.5 w-px bg-white/10 flex-shrink-0" aria-hidden="true" />
+                    )}
+                  </li>
+                ))}
+              </ul>
 
-            <ul className="flex items-center gap-0.5 overflow-x-auto scrollbar-none h-full px-2">
-              {TAB_IDS.map((tab, i) => (
-                <li key={tab.id} className="flex items-center flex-shrink-0">
-                  <button
-                    onClick={() => handleTabChange(tab.id)}
-                    className={`px-2.5 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-colors ${
-                      activeTab === tab.id
-                        ? 'bg-white/10 text-white'
-                        : 'text-white/50 hover:text-white hover:bg-white/5'
-                    }`}
-                  >
-                    {t(tab.key)}
-                  </button>
-                  {(i === 3 || i === 10) && (
-                    <span className="mx-1 h-3.5 w-px bg-white/10 flex-shrink-0" aria-hidden="true" />
-                  )}
-                </li>
-              ))}
-            </ul>
-
-            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[#030303] to-transparent pointer-events-none z-10" />
-          </nav>
-
-          {/* Right: Actions */}
-          <div className="flex-shrink-0 flex items-center gap-1">
-            <div className="hidden sm:flex items-center gap-1.5 bg-white/5 px-2.5 py-1.5 rounded-full border border-white/5 mr-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-xs font-bold text-white/90">
-                ${balance !== null ? `${balance}` : '---'}
-              </span>
-            </div>
-
-            <button
-              onClick={() => router.push('/pricing')}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[13px] font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-            >
-              Pricing
-            </button>
-
-            <span className="hidden sm:block h-4 w-px bg-white/10 mx-1" aria-hidden="true" />
-
-            <button
-              onClick={handleLangChange}
-              title={t('lang.switch')}
-              className="flex items-center justify-center size-8 rounded-lg text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-colors"
-            >
-              {LANG_LABEL[LANG_CYCLE[(LANG_CYCLE.indexOf(lang) + 1) % LANG_CYCLE.length]]}
-            </button>
-
-            <span className="h-4 w-px bg-white/10 mx-1" aria-hidden="true" />
-
-            {/* Account: profile menu when signed in, otherwise a sign-in button */}
-            {isAuthed ? (
-              <ProfileMenu
-                email={userEmail}
-                balance={balance}
-                onSignOut={handleSignOut}
-                onUpgrade={() => router.push('/pricing')}
-              />
-            ) : (
-              <button
-                onClick={() => setShowAuth(true)}
-                className="flex items-center px-3.5 py-1.5 rounded-lg bg-[#22d3ee] text-black text-[13px] font-bold hover:bg-[#e5ff33] transition-colors"
-              >
-                Sign in
-              </button>
-            )}
-          </div>
-        </header>
+              <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[#030303] to-transparent pointer-events-none z-10" />
+            </nav>
+          }
+        />
       )}
 
       {/* Auth modal */}

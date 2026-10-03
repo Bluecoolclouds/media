@@ -1,8 +1,12 @@
 import type { NextAuthConfig } from 'next-auth';
-import Credentials from 'next-auth/providers/credentials';
 import Google from 'next-auth/providers/google';
 import GitHub from 'next-auth/providers/github';
 
+// Note: The Credentials provider is defined directly in auth.ts, not here.
+// Auth.js merges each provider's original `options` over its top-level fields
+// at runtime, so overriding `authorize` on a copy of a provider created here
+// (e.g. via `authConfig.providers.map(...)`) is silently discarded. Keep
+// providers that need Node-only dependencies (Prisma, bcrypt) out of this config.
 export const authConfig = {
   providers: [
     Google({
@@ -12,16 +16,6 @@ export const authConfig = {
     GitHub({
       clientId: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    }),
-    Credentials({
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        // This will be implemented in auth.ts with Prisma
-        return null;
-      },
     }),
   ],
   pages: {

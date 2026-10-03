@@ -1,0 +1,141 @@
+// Affiliate program page content, keyed by language.
+export const affiliateContent = {
+    en: {
+        nav: {
+            openStudio: 'Open Studio →',
+        },
+        hero: {
+            badge: 'Affiliate Program',
+            titleLine1: 'Share apinet.cloud,',
+            titleLine2: 'get paid for it',
+            subtitle: 'Earn up to 25% recurring commission for 12 months on every subscription that comes through your link. Your audience gets a discount too.',
+            ctaPrimary: 'Apply now',
+            ctaSecondary: 'See how it works',
+        },
+        steps: {
+            label: 'How it works',
+            title: '3 easy steps to start earning',
+            subtitle: 'You do not wait on us to start. Your link is live from the moment you are approved.',
+            items: [
+                { title: 'Apply', desc: 'Tell us where you would share apinet.cloud — a channel, a newsletter, a community. We review applications within a few days.' },
+                { title: 'Share your link', desc: 'Post it anywhere you already talk about your work — videos, threads, newsletters, courses.' },
+                { title: 'Earn commission', desc: 'Get paid when someone subscribes through your link, with recurring commission on renewals for 12 months.' },
+            ],
+        },
+        calculator: {
+            label: 'Earnings calculator',
+            title: 'Estimate your earnings',
+            subtitle: 'New referrals add to the ones already earning, so your commission can grow every month. Adjust the sliders to estimate your earnings over 12 months.',
+            referralsLabel: 'New referrals per month',
+            referralsUnit: 'referrals / month',
+            spendLabel: 'Average plan spend per referral per month',
+            spendUnit: '/ referral',
+            totalLabel: 'Total estimated commission (12 months)',
+            disclaimer: 'Estimate only. Actual earnings depend on renewals, cancellations, refunds, and your commission rate.',
+        },
+        perks: {
+            label: 'Your profit',
+            title: 'There is more in it than the commission',
+            subtitle: 'The rate is the headline, but the program is built to make sharing easy: something real to offer your audience, up to 25% from every subscription, and a route to a better rate as you grow.',
+            items: [
+                { icon: '💵', title: 'Paid in cash, not credits', desc: 'Commission is real money on every qualifying plan, not a platform balance you have to spend back on us.' },
+                { icon: '🎁', title: 'A discount worth sharing', desc: 'Everyone who subscribes through your link gets a meaningful discount on their first payment.' },
+                { icon: '📊', title: 'Clear referral tracking', desc: 'See which subscriptions and commissions are attributed to your link, so you know what is working.' },
+                { icon: '📈', title: 'A better rate as you grow', desc: 'The more qualifying revenue you generate, the higher your commission rate — up to 25%.' },
+            ],
+        },
+        numbers: {
+            title: 'What you get for sharing a link',
+            items: [
+                { value: '25%', label: 'Up to 25% commission on qualifying subscriptions' },
+                { value: '12', label: 'Up to 12 months of recurring commission' },
+                { value: '20%', label: 'Discount for referrals on their first payment' },
+            ],
+        },
+        faqTitle: 'Frequently asked questions',
+        faq: [
+            { q: 'Who can join?', a: 'Anyone with an audience — creators, educators, communities. Apply with a short form and we review it within a few days.' },
+            { q: 'How much do I earn?', a: 'Up to 25% of the plan price your referrals pay. Your rate can grow with the revenue you generate.' },
+            { q: 'How long does a referral keep paying me?', a: 'Twelve months from the day they become your referral. On monthly plans you earn each renewal; annual plans are credited upfront for the full term.' },
+            { q: 'What earns commission?', a: 'Subscription purchases, renewals and upgrades within the first 12 months of a referral joining through your link.' },
+            { q: 'Can I run paid ads to my link?', a: 'No bidding on the apinet.cloud brand name or coupon/cashback site listings. Organic promotion is welcome.' },
+            { q: 'When do I get paid?', a: 'Commissions are reviewed monthly and paid out once they clear the refund window. You can track status from your affiliate dashboard once it is live.' },
+        ],
+        apply: {
+            title: 'Ready to start sharing?',
+            subtitle: 'Send us a quick note with where you would share apinet.cloud and we will get your affiliate link set up.',
+            emailCta: 'Apply via email',
+            email: 'affiliates@apinet.cloud',
+        },
+        footer: '© 2026 apinet.cloud — Open Generative AI Studio.',
+    },
+    ru: {
+        nav: {
+            openStudio: 'Открыть студию →',
+        },
+        hero: {
+            badge: 'Партнёрская программа',
+            titleLine1: 'Делитесь apinet.cloud',
+            titleLine2: 'и получайте за это деньги',
+            subtitle: 'Зарабатывайте до 25% регулярной комиссии в течение 12 месяцев с каждой подписки, оформленной по вашей ссылке. Вашей аудитории тоже достанется скидка.',
+            ctaPrimary: 'Подать заявку',
+            ctaSecondary: 'Как это работает',
+        },
+        steps: {
+            label: 'Как это работает',
+            title: '3 простых шага до первого заработка',
+            subtitle: 'Не нужно ждать нас — ссылка активна с момента одобрения заявки.',
+            items: [
+                { title: 'Подайте заявку', desc: 'Расскажите, где вы будете делиться apinet.cloud — канал, рассылка, сообщество. Рассматриваем заявки в течение нескольких дней.' },
+                { title: 'Делитесь ссылкой', desc: 'Публикуйте там, где вы уже рассказываете о своей работе — видео, посты, рассылки, курсы.' },
+                { title: 'Получайте комиссию', desc: 'Зарабатывайте, когда кто-то оформляет подписку по вашей ссылке, с регулярной комиссией за продления в течение 12 месяцев.' },
+            ],
+        },
+        calculator: {
+            label: 'Калькулятор заработка',
+            title: 'Оцените свой доход',
+            subtitle: 'Новые рефералы добавляются к уже приносящим доход, поэтому комиссия может расти каждый месяц. Двигайте слайдеры, чтобы оценить доход за 12 месяцев.',
+            referralsLabel: 'Новых рефералов в месяц',
+            referralsUnit: 'рефералов / месяц',
+            spendLabel: 'Средние траты реферала на тариф в месяц',
+            spendUnit: '/ реферал',
+            totalLabel: 'Итоговая оценка комиссии (12 месяцев)',
+            disclaimer: 'Это только оценка. Реальный доход зависит от продлений, отмен, возвратов и вашей ставки комиссии.',
+        },
+        perks: {
+            label: 'Ваша выгода',
+            title: 'Это больше, чем просто комиссия',
+            subtitle: 'Ставка — это заголовок, но программа создана, чтобы делиться было легко: реальное предложение для вашей аудитории, до 25% с каждой подписки и путь к более высокой ставке по мере роста.',
+            items: [
+                { icon: '💵', title: 'Выплата деньгами, не кредитами', desc: 'Комиссия — это реальные деньги за каждый подходящий тариф, а не баланс платформы, который нужно потратить обратно на нас.' },
+                { icon: '🎁', title: 'Скидка, которой стоит делиться', desc: 'Каждый, кто оформляет подписку по вашей ссылке, получает заметную скидку на первый платёж.' },
+                { icon: '📊', title: 'Прозрачное отслеживание', desc: 'Видите, какие подписки и комиссии относятся к вашей ссылке, и понимаете, что работает.' },
+                { icon: '📈', title: 'Ставка растёт с вами', desc: 'Чем больше подходящего дохода вы приносите, тем выше ваша ставка комиссии — до 25%.' },
+            ],
+        },
+        numbers: {
+            title: 'Что вы получаете за ссылку',
+            items: [
+                { value: '25%', label: 'До 25% комиссии с подходящих подписок' },
+                { value: '12', label: 'До 12 месяцев регулярной комиссии' },
+                { value: '20%', label: 'Скидка рефералам на первый платёж' },
+            ],
+        },
+        faqTitle: 'Частые вопросы',
+        faq: [
+            { q: 'Кто может участвовать?', a: 'Любой, у кого есть аудитория — авторы, преподаватели, сообщества. Подайте короткую заявку, мы рассмотрим её в течение нескольких дней.' },
+            { q: 'Сколько я заработаю?', a: 'До 25% от стоимости тарифа, который платят ваши рефералы. Ставка может расти вместе с объёмом приносимого вами дохода.' },
+            { q: 'Как долго реферал приносит мне доход?', a: 'Двенадцать месяцев с момента, когда он стал вашим рефералом. На месячных тарифах — за каждое продление; на годовых комиссия начисляется сразу за весь срок.' },
+            { q: 'Что приносит комиссию?', a: 'Покупки подписки, продления и переходы на тариф выше в течение первых 12 месяцев с момента перехода реферала по вашей ссылке.' },
+            { q: 'Можно ли запускать платную рекламу на ссылку?', a: 'Нельзя делать ставки на бренд apinet.cloud и размещаться на купонных/кэшбэк-сайтах. Органическое продвижение — пожалуйста.' },
+            { q: 'Когда я получу выплату?', a: 'Комиссии проверяются ежемесячно и выплачиваются после прохождения окна возвратов. Статус можно будет отслеживать в партнёрском кабинете, когда он появится.' },
+        ],
+        apply: {
+            title: 'Готовы начать делиться?',
+            subtitle: 'Напишите нам, где вы планируете делиться apinet.cloud, и мы настроим вашу партнёрскую ссылку.',
+            emailCta: 'Подать заявку по email',
+            email: 'affiliates@apinet.cloud',
+        },
+        footer: '© 2026 apinet.cloud — Open Generative AI Studio.',
+    },
+};

@@ -8,8 +8,8 @@ export const metadata = {
 
 function LoginContent() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Suspense fallback={<div>Loading...</div>}>
+    <div className="min-h-screen flex items-center justify-center bg-[#050505] px-4">
+      <Suspense fallback={<div className="text-white">Loading...</div>}>
         <LoginForm />
       </Suspense>
     </div>
