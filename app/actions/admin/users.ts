@@ -120,6 +120,7 @@ export async function updateUserRole(id: string, role: 'USER' | 'ADMIN') {
   const user = await prisma.user.update({
     where: { id },
     data: { role },
+    select: { id: true, name: true, email: true, role: true, updatedAt: true },
   });
 
   await createAuditLog({
