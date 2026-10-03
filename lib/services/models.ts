@@ -16,23 +16,33 @@ function mapModelTypeToStudioType(type: ModelType): string {
     IMAGE_TO_VIDEO: 'image-to-video',
     AUDIO: 'audio',
     LIPSYNC: 'lipsync',
+    AVATAR: 'avatar',
+    RECAST: 'recast',
+    PRODUCT_CARD: 'product-card',
   };
   return mapping[type];
 }
 
 /**
- * Format DB model to Studio format
+ * Format DB model to Studio format.
+ *
+ * `Model.name` is unique and doubles as the stable slug/id the studio
+ * components look up by (e.g. getRecastModelById, getAudioModelById).
+ * A separate human-friendly label can be stored in `parameters.displayName`;
+ * if present it is used for the `name` field shown in the UI, otherwise the
+ * slug itself is used.
  */
 export function formatModelForStudio(model: any) {
+  const { displayName, ...restParameters } = model.parameters || {};
   return {
-    id: model.name, // Use name as id for compatibility
-    name: model.name,
+    id: model.name,
+    name: displayName || model.name,
     endpoint: model.endpoint,
     category: model.category,
     provider: model.provider,
     inputs: model.parameters?.inputs || {},
-    // Include any other fields from parameters
-    ...(model.parameters || {}),
+    // Include any other fields from parameters (family, videoField, etc.)
+    ...restParameters,
   };
 }
 
@@ -59,6 +69,9 @@ export async function getActiveModels() {
       'image-to-video': [],
       audio: [],
       lipsync: [],
+      avatar: [],
+      recast: [],
+      'product-card': [],
     };
 
     models.forEach((model) => {

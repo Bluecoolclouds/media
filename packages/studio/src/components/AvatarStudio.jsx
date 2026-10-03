@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { generateImage } from "../muapi.js";
-import { t2iModels, getAspectRatiosForModel } from "../models.js";
+import { avatarModels as fallbackAvatarModels } from "../models.js";
+import { useDynamicModels } from "../hooks/useDynamicModels";
 import { useLang, makeT } from "../i18n/useLang";
 import { avatarStudioDict } from "../i18n/dictionaries/avatarStudio";
 
@@ -121,16 +122,17 @@ export default function AvatarStudio({ apiKey, onGenerationComplete }) {
 
   const PERSIST_KEY = "hg_avatar_studio_persistent";
 
-  const DEFAULT_MODEL = t2iModels[0];
+  const { models: avatarModels } = useDynamicModels("avatar", fallbackAvatarModels);
 
   // ── State ────────────────────────────────────────────────────────────────
   const [prompt, setPrompt] = useState("");
   const [selectedStyle, setSelectedStyle] = useState(STYLE_PRESETS[0].id);
+  const [selectedModelId, setSelectedModelId] = useState(fallbackAvatarModels[0]?.id ?? "");
   const [selectedAr, setSelectedAr] = useState(
-    DEFAULT_MODEL.inputs?.aspect_ratio?.default || "1:1",
+    fallbackAvatarModels[0]?.inputs?.aspect_ratio?.default || "1:1",
   );
   const [batchSize, setBatchSize] = useState(1);
-  const [dropdownOpen, setDropdownOpen] = useState(null); // 'ar' | null
+  const [dropdownOpen, setDropdownOpen] = useState(null); // 'ar' | 'model' | null
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState(null);
   const [fullscreenUrl, setFullscreenUrl] = useState(null);
@@ -139,7 +141,16 @@ export default function AvatarStudio({ apiKey, onGenerationComplete }) {
   const textareaRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  const aspectRatios = getAspectRatiosForModel(DEFAULT_MODEL.id);
+  // If the dynamic model list loads and the current selection isn't in it,
+  // fall back to the first model in the new list.
+  useEffect(() => {
+    if (avatarModels.length > 0 && !avatarModels.find((m) => m.id === selectedModelId)) {
+      setSelectedModelId(avatarModels[0].id);
+    }
+  }, [avatarModels, selectedModelId]);
+
+  const selectedModel = avatarModels.find((m) => m.id === selectedModelId) || avatarModels[0];
+  const aspectRatios = selectedModel?.inputs?.aspect_ratio?.enum || [];
 
   const getStyleLabel = (id) => {
     const preset = STYLE_PRESETS.find((s) => s.id === id);
@@ -166,6 +177,7 @@ export default function AvatarStudio({ apiKey, onGenerationComplete }) {
         const data = JSON.parse(stored);
         if (data.prompt) setPrompt(data.prompt);
         if (data.selectedStyle) setSelectedStyle(data.selectedStyle);
+        if (data.selectedModelId) setSelectedModelId(data.selectedModelId);
         if (data.selectedAr) setSelectedAr(data.selectedAr);
         if (data.batchSize) setBatchSize(data.batchSize);
         if (data.history) setHistory(data.history);
@@ -181,14 +193,14 @@ export default function AvatarStudio({ apiKey, onGenerationComplete }) {
       try {
         localStorage.setItem(
           PERSIST_KEY,
-          JSON.stringify({ prompt, selectedStyle, selectedAr, batchSize, history }),
+          JSON.stringify({ prompt, selectedStyle, selectedModelId, selectedAr, batchSize, history }),
         );
       } catch (err) {
         console.warn("Failed to save AvatarStudio persistence:", err);
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [prompt, selectedStyle, selectedAr, batchSize, history]);
+  }, [prompt, selectedStyle, selectedModelId, selectedAr, batchSize, history]);
 
   // ── Textarea auto-resize ───────────────────────────────────────────────────
   const handleTextareaInput = () => {
@@ -222,7 +234,7 @@ export default function AvatarStudio({ apiKey, onGenerationComplete }) {
       const results = await Promise.all(
         Array.from({ length: batchSize }).map(async () => {
           return await generateImage(apiKey, {
-            model: DEFAULT_MODEL.id,
+            model: selectedModel.endpoint || selectedModel.id,
             prompt: finalPrompt,
             aspect_ratio: selectedAr,
           });
@@ -242,7 +254,7 @@ export default function AvatarStudio({ apiKey, onGenerationComplete }) {
           setHistory((prev) => [entry, ...prev.slice(0, 49)]);
           onGenerationComplete?.({
             url: res.url,
-            model: DEFAULT_MODEL.id,
+            model: selectedModel.endpoint || selectedModel.id,
             prompt: finalPrompt,
             type: "image",
           });
@@ -422,6 +434,64 @@ export default function AvatarStudio({ apiKey, onGenerationComplete }) {
                   <span className="text-[9px] font-bold text-black uppercase">A</span>
                 </div>
                 <span className="text-xs font-semibold text-white/70">{styleLabel}</span>
+              </div>
+
+              {/* Model button */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDropdownOpen((o) => (o === "model" ? null : "model"));
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 bg-white/[0.03] hover:bg-white/[0.06] rounded-md transition-all border border-white/[0.03] group whitespace-nowrap"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="opacity-40 text-white">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 3" />
+                  </svg>
+                  <span className="text-[11px] font-semibold text-white/70 group-hover:text-[#a855f7] transition-colors">
+                    {selectedModel?.name ?? t('model.selectPlaceholder') ?? "Model"}
+                  </span>
+                </button>
+
+                {dropdownOpen === "model" && (
+                  <div
+                    ref={dropdownRef}
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute bottom-[calc(100%+12px)] left-0 z-50 bg-[#0a0a0a] rounded-md p-3 max-h-[40vh] overflow-y-auto custom-scrollbar shadow-2xl border border-white/10 min-w-[200px]"
+                  >
+                    <div className="text-xs font-medium text-muted pb-2 border-b border-white/5 mb-2">
+                      {t('model.title') ?? "Model"}
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      {avatarModels.map((model) => (
+                        <div
+                          key={model.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedModelId(model.id);
+                            const ratios = model.inputs?.aspect_ratio?.enum || [];
+                            if (ratios.length > 0 && !ratios.includes(selectedAr)) {
+                              setSelectedAr(model.inputs?.aspect_ratio?.default ?? ratios[0]);
+                            }
+                            setDropdownOpen(null);
+                          }}
+                          className="flex items-center justify-between p-2 hover:bg-white/5 rounded-md cursor-pointer transition-all group"
+                        >
+                          <span className="text-xs font-bold text-white opacity-80 group-hover:opacity-100">
+                            {model.name}
+                          </span>
+                          {selectedModelId === model.id && (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="4">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Aspect ratio button */}

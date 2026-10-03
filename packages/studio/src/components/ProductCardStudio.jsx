@@ -3,15 +3,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { generateI2I, uploadFile } from "../muapi.js";
 import {
-  getAspectRatiosForI2IModel,
-  getResolutionsForI2IModel,
+  productCardModels as fallbackProductCardModels,
 } from "../models.js";
+import { useDynamicModels } from "../hooks/useDynamicModels";
 import { useLang, makeT } from "../i18n/useLang";
 import { productCardStudioDict } from "../i18n/dictionaries/productCardStudio";
 
 // ─── constants ──────────────────────────────────────────────────────────────
 
-const MODEL_ID = "nano-banana-pro-edit";
 const MAX_PRODUCT_IMAGES = 4;
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
@@ -218,6 +217,11 @@ export default function ProductCardStudio({
   const lang = useLang();
   const t = makeT(productCardStudioDict, lang);
 
+  const { models: productCardModels } = useDynamicModels(
+    "product-card",
+    fallbackProductCardModels,
+  );
+
   // ── Product state ───────────────────────────────────────────────────────
   const [productImages, setProductImages] = useState([]); // [{url}]
   const [uploading, setUploading] = useState(false);
@@ -233,16 +237,17 @@ export default function ProductCardStudio({
   const [modelPhoto, setModelPhoto] = useState(null); // {url} | null
   const [environmentPhoto, setEnvironmentPhoto] = useState(null); // {url} | null
   const [photoStyle, setPhotoStyle] = useState(PHOTOGRAPHY_STYLES[0].id);
+  const [selectedModelId, setSelectedModelId] = useState(fallbackProductCardModels[0]?.id ?? "");
   const [aspectRatio, setAspectRatio] = useState(
-    getAspectRatiosForI2IModel(MODEL_ID)[0] || "1:1",
+    fallbackProductCardModels[0]?.inputs?.aspect_ratio?.enum?.[0] || "1:1",
   );
   const [resolution, setResolution] = useState(
-    getResolutionsForI2IModel(MODEL_ID)[0] || "1k",
+    fallbackProductCardModels[0]?.inputs?.resolution?.enum?.[0] || "1k",
   );
   const [batchSize, setBatchSize] = useState(1);
 
   // ── UI state ─────────────────────────────────────────────────────────────
-  const [dropdownOpen, setDropdownOpen] = useState(null); // 'category' | null
+  const [dropdownOpen, setDropdownOpen] = useState(null); // 'category' | 'model' | null
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState(null);
   const [fullscreenUrl, setFullscreenUrl] = useState(null);
@@ -254,8 +259,21 @@ export default function ProductCardStudio({
   const dropdownRef = useRef(null);
   const textareaRef = useRef(null);
 
-  const aspectRatios = getAspectRatiosForI2IModel(MODEL_ID);
-  const resolutions = getResolutionsForI2IModel(MODEL_ID);
+  // If the dynamic model list loads and the current selection isn't in it,
+  // fall back to the first model in the new list.
+  useEffect(() => {
+    if (
+      productCardModels.length > 0 &&
+      !productCardModels.find((m) => m.id === selectedModelId)
+    ) {
+      setSelectedModelId(productCardModels[0].id);
+    }
+  }, [productCardModels, selectedModelId]);
+
+  const selectedModel =
+    productCardModels.find((m) => m.id === selectedModelId) || productCardModels[0];
+  const aspectRatios = selectedModel?.inputs?.aspect_ratio?.enum || [];
+  const resolutions = selectedModel?.inputs?.resolution?.enum || [];
   const wishesMax = 5000;
   const showModesForCategory = (CATEGORY_SHOW_MODES[category] || CATEGORY_SHOW_MODES.other).map(
     (id) => ({ id, ...MODE_DEFS[id] }),
@@ -288,6 +306,7 @@ export default function ProductCardStudio({
         if (data.modelPhoto) setModelPhoto(data.modelPhoto);
         if (data.environmentPhoto) setEnvironmentPhoto(data.environmentPhoto);
         if (data.photoStyle) setPhotoStyle(data.photoStyle);
+        if (data.selectedModelId) setSelectedModelId(data.selectedModelId);
         if (data.aspectRatio) setAspectRatio(data.aspectRatio);
         if (data.resolution) setResolution(data.resolution);
         if (data.batchSize) setBatchSize(data.batchSize);
@@ -314,6 +333,7 @@ export default function ProductCardStudio({
             modelPhoto,
             environmentPhoto,
             photoStyle,
+            selectedModelId,
             aspectRatio,
             resolution,
             batchSize,
@@ -335,6 +355,7 @@ export default function ProductCardStudio({
     modelPhoto,
     environmentPhoto,
     photoStyle,
+    selectedModelId,
     aspectRatio,
     resolution,
     batchSize,
@@ -490,7 +511,7 @@ export default function ProductCardStudio({
       const results = await Promise.all(
         Array.from({ length: batchSize }).map(() =>
           generateI2I(apiKey, {
-            model: MODEL_ID,
+            model: selectedModel.endpoint || selectedModel.id,
             images_list: imageUrls,
             prompt: finalPrompt,
             aspect_ratio: aspectRatio,
@@ -514,7 +535,7 @@ export default function ProductCardStudio({
           setHistory((prev) => [entry, ...prev.slice(0, 49)]);
           onGenerationComplete?.({
             url: res.url,
-            model: MODEL_ID,
+            model: selectedModel.endpoint || selectedModel.id,
             prompt: finalPrompt,
             type: "image",
           });
@@ -778,6 +799,50 @@ export default function ProductCardStudio({
 
             {advancedOpen && (
               <div className="flex flex-col gap-4 pl-1">
+                {/* AI model */}
+                <div className="relative flex flex-col gap-1.5">
+                  <label className="text-xs text-muted">{t('advanced.model') ?? 'AI Model'}</label>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDropdownOpen((o) => (o === "model" ? null : "model"));
+                    }}
+                    className="w-full flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white hover:border-primary/40 transition-colors"
+                  >
+                    <span>{selectedModel?.name ?? t('model.selectPlaceholder') ?? 'Select model'}</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" className="opacity-50">
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
+                  </button>
+                  {dropdownOpen === "model" && (
+                    <div
+                      ref={dropdownRef}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute top-[calc(100%+4px)] left-0 right-0 z-50 bg-[#111] rounded-lg p-2 shadow-2xl border border-white/10"
+                    >
+                      <SimpleDropdown
+                        title={t('advanced.model') ?? 'AI Model'}
+                        options={productCardModels.map((m) => ({ value: m.id, label: m.name }))}
+                        selected={selectedModelId}
+                        onSelect={(id) => {
+                          setSelectedModelId(id);
+                          const model = productCardModels.find((m) => m.id === id);
+                          const ratios = model?.inputs?.aspect_ratio?.enum || [];
+                          if (ratios.length > 0 && !ratios.includes(aspectRatio)) {
+                            setAspectRatio(ratios[0]);
+                          }
+                          const resOptions = model?.inputs?.resolution?.enum || [];
+                          if (resOptions.length > 0 && !resOptions.includes(resolution)) {
+                            setResolution(resOptions[0]);
+                          }
+                        }}
+                        onClose={() => setDropdownOpen(null)}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Reference photos: model + environment */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-2">

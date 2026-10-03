@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { generateImage, generateI2I, uploadFile } from "../muapi.js";
 import { useLang, makeT } from "../i18n/useLang";
 import { imageStudioDict } from "../i18n/dictionaries/imageStudio";
+import { useDynamicModels } from "../hooks/useDynamicModels";
 import {
   t2iModels as fallbackT2iModels,
   i2iModels as fallbackI2iModels,
@@ -18,49 +19,6 @@ import {
   getDefaultEffectForI2IModel,
   getI2IModelById,
 } from "../models.js";
-
-// Feature flag for dynamic models
-const USE_DYNAMIC_MODELS = typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_USE_DYNAMIC_MODELS === 'true';
-
-// Hook to fetch models dynamically
-function useDynamicModels(type, fallbackModels) {
-  const [models, setModels] = useState(fallbackModels);
-  const [loading, setLoading] = useState(USE_DYNAMIC_MODELS);
-
-  useEffect(() => {
-    if (!USE_DYNAMIC_MODELS) {
-      setModels(fallbackModels);
-      setLoading(false);
-      return;
-    }
-
-    let mounted = true;
-
-    async function fetchModels() {
-      try {
-        const response = await fetch(`/api/models?type=${type}`);
-        const data = await response.json();
-
-        if (mounted && data.success && data.models?.length > 0) {
-          setModels(data.models);
-        } else if (mounted) {
-          setModels(fallbackModels);
-        }
-      } catch (err) {
-        console.error(`Failed to fetch ${type} models, using fallback:`, err);
-        if (mounted) setModels(fallbackModels);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    }
-
-    fetchModels();
-
-    return () => { mounted = false; };
-  }, [type, fallbackModels]);
-
-  return { models, loading };
-}
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 

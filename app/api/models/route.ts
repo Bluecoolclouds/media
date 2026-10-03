@@ -16,6 +16,9 @@ async function getFallbackModels() {
       'image-to-video': models.i2vModels || [],
       audio: models.audioModels || [],
       lipsync: models.lipsyncModels || [],
+      avatar: models.avatarModels || [],
+      recast: models.recastModels || [],
+      'product-card': models.productCardModels || [],
     };
   } catch (error) {
     console.error('Error loading fallback models:', error);
@@ -27,7 +30,7 @@ async function getFallbackModels() {
  * GET /api/models
  * Returns active models from database, optionally filtered by type
  * Query params:
- *   - type: text-to-image | image-to-image | text-to-video | image-to-video | audio | lipsync
+ *   - type: text-to-image | image-to-image | text-to-video | image-to-video | audio | lipsync | avatar | recast | product-card
  */
 export async function GET(request: Request) {
   try {

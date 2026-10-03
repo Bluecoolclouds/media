@@ -22,6 +22,9 @@ enum ModelType {
   IMAGE_TO_VIDEO
   AUDIO
   LIPSYNC
+  AVATAR
+  RECAST
+  PRODUCT_CARD
 }
 
 enum GenerationStatus {

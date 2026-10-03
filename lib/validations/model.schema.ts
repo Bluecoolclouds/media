@@ -7,6 +7,9 @@ export const modelTypeSchema = z.enum([
   'IMAGE_TO_VIDEO',
   'AUDIO',
   'LIPSYNC',
+  'AVATAR',
+  'RECAST',
+  'PRODUCT_CARD',
 ]);
 
 export const createModelSchema = z.object({

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { generateAudio, uploadFile } from "../muapi.js";
-import { audioModels, getAudioModelById } from "../models.js";
+import { audioModels as fallbackAudioModels } from "../models.js";
+import { useDynamicModels } from "../hooks/useDynamicModels";
 import { useLang, makeT } from "../i18n/useLang";
 import { audioStudioDict } from "../i18n/dictionaries/audioStudio";
 
@@ -488,7 +489,8 @@ export default function AudioStudio({
   const t = makeT(audioStudioDict, lang);
 
   // ── Mode & model state ──────────────────────────────────────────────────
-  const [selectedModelId, setSelectedModelId] = useState(audioModels[0]?.id ?? "");
+  const { models: audioModels } = useDynamicModels("audio", fallbackAudioModels);
+  const [selectedModelId, setSelectedModelId] = useState(fallbackAudioModels[0]?.id ?? "");
   const [params, setParams] = useState({});
   const [openDropdown, setOpenDropdown] = useState(false);
   const modelBtnRef = useRef(null);
@@ -505,7 +507,15 @@ export default function AudioStudio({
   const history = historyItems ?? internalHistory;
   const [activeHistoryIdx, setActiveHistoryIdx] = useState(0);
 
-  const selectedModel = getAudioModelById(selectedModelId);
+  const selectedModel = audioModels.find((m) => m.id === selectedModelId);
+
+  // If the dynamic model list loads and the current selection isn't in it
+  // (e.g. still on the fallback's default id), fall back to the first model.
+  useEffect(() => {
+    if (audioModels.length > 0 && !audioModels.find((m) => m.id === selectedModelId)) {
+      setSelectedModelId(audioModels[0].id);
+    }
+  }, [audioModels, selectedModelId]);
 
   // ── Initialize params when model changes ──────────────────────────────
   useEffect(() => {

@@ -64,6 +64,12 @@ export const t2iModels = [
   },
 ];
 
+// Avatar Studio reuses the text-to-image model catalog (it's generating a
+// styled portrait from a text description, same as T2I). Kept as a separate
+// export so it has its own stable identity for admin management / DB rows
+// (ModelType.AVATAR), independent from TEXT_TO_IMAGE.
+export const avatarModels = t2iModels;
+
 export const t2iModelsLegacy = [
   {
     "id": "nano-banana",
@@ -8305,6 +8311,15 @@ export const imageLipSyncModels = lipsyncModels.filter(m => m.category === 'imag
 export const videoLipSyncModels = lipsyncModels.filter(m => m.category === 'video');
 
 export const getV2VModelById = (id) => v2vModels.find(m => m.id === id);
+
+// Product Card Studio reuses the image-to-image (editing) model catalog,
+// filtered to models that accept multiple reference images (the product
+// photo plus optional model/environment reference photos). Kept as a
+// separate export for its own stable identity for admin management / DB
+// rows (ModelType.PRODUCT_CARD), independent from IMAGE_TO_IMAGE.
+export const productCardModels = i2iModels.filter(
+  (m) => m.imageField === 'images_list' && (m.maxImages ?? 1) >= 2,
+);
 
 // ─── Recast / Body Swap models ───────────────────────────────────────────────
 // Source video (the performance / motion) + character image (the new identity)

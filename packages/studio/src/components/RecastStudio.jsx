@@ -3,10 +3,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { processRecast, uploadFile } from "../muapi.js";
 import {
-  recastModels,
-  getRecastModelById,
-  getAspectRatiosForRecastModel,
+  recastModels as fallbackRecastModels,
 } from "../models.js";
+import { useDynamicModels } from "../hooks/useDynamicModels";
 import { useLang, makeT } from "../i18n/useLang";
 import { recastStudioDict } from "../i18n/dictionaries/recastStudio";
 
@@ -274,7 +273,8 @@ export default function RecastStudio({
   const PERSIST_KEY = "hg_recast_studio_persistent";
 
   // ── Model state ───────────────────────────────────────────────────────────
-  const firstModel = recastModels[0];
+  const { models: recastModels } = useDynamicModels("recast", fallbackRecastModels);
+  const firstModel = fallbackRecastModels[0];
   const [selectedModelId, setSelectedModelId] = useState(firstModel?.id ?? "");
   const [selectedAspectRatio, setSelectedAspectRatio] = useState(
     firstModel?.inputs?.aspect_ratio?.default ?? "16:9",
@@ -373,9 +373,17 @@ export default function RecastStudio({
     internalHistory,
   ]);
 
+  // If the dynamic model list loads and the current selection isn't in it
+  // (e.g. still on the fallback's default id), fall back to the first model.
+  useEffect(() => {
+    if (recastModels.length > 0 && !recastModels.find((m) => m.id === selectedModelId)) {
+      setSelectedModelId(recastModels[0].id);
+    }
+  }, [recastModels, selectedModelId]);
+
   // ── Derived model info ──────────────────────────────────────────────────────
-  const selectedModel = getRecastModelById(selectedModelId);
-  const aspectOptions = getAspectRatiosForRecastModel(selectedModelId);
+  const selectedModel = recastModels.find((m) => m.id === selectedModelId);
+  const aspectOptions = selectedModel?.inputs?.aspect_ratio?.enum || [];
   const showAspect = aspectOptions.length > 0;
   const showPrompt = !!selectedModel?.hasPrompt;
 
@@ -440,7 +448,7 @@ export default function RecastStudio({
   // ── Model selection ─────────────────────────────────────────────────────────
   const handleModelSelect = (model) => {
     setSelectedModelId(model.id);
-    const ratios = getAspectRatiosForRecastModel(model.id);
+    const ratios = model.inputs?.aspect_ratio?.enum || [];
     if (ratios.length > 0) {
       setSelectedAspectRatio(model.inputs?.aspect_ratio?.default ?? ratios[0]);
     }
