@@ -37,6 +37,13 @@ out/
 .env.*
 !.env.example
 
+# TypeScript / local artifacts
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+resp.txt
+models_dump.json
+.opencode/
+
 # temp clones (duplicates of package dirs)
 packages/tmp-design/
 packages/tmp-poe/
